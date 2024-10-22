@@ -10,8 +10,9 @@ class SQLDeveloperEmulator:
         self.root.resizable(False, False)
         self.root.eval('tk::PlaceWindow . center')
 
-        self.conn = None  #
-        self.connections = {}
+        self.conn = None  # Inicialmente sin conexión
+        self.connections = {}  # Diccionario para almacenar conexiones
+        self.selected_connection = None  # Almacena la conexión seleccionada
 
         topFrame = tk.Frame(root)
         topFrame.config(width=800, height=200, bg="red")
@@ -21,8 +22,7 @@ class SQLDeveloperEmulator:
         self.combo.set("Seleccione una opción")
         self.combo.pack(pady=10)
 
-
-
+        # Contenedores para los paneles izquierdo
         leftContainerFrame = tk.Frame(root)
         leftContainerFrame.config(width=200, height=400, bg="white")
         leftContainerFrame.pack(side="left", fill="both")
@@ -30,27 +30,42 @@ class SQLDeveloperEmulator:
         self.leftUpperFrame = tk.Frame(leftContainerFrame)
         self.leftUpperFrame.config(bg="blue")
         self.leftUpperFrame.pack(side="top", fill="both", expand=True)
-        self.leftUpperFrame.config(width=200, height=360)
 
         leftLowerFrame = tk.Frame(leftContainerFrame)
         leftLowerFrame.config(bg="yellow")
         leftLowerFrame.pack(side="top", fill="both", expand=True)
-        leftLowerFrame.config(width=200, height=30)
+
+        # Botones para agregar, modificar y eliminar conexiones
         self.agregarConexionBtn = tk.Button(leftLowerFrame, text="Agregar conexión", command=lambda: self.show_new_connection_form(middleFrame))
         self.agregarConexionBtn.pack(pady=10)
-        self.eliminarConexionBtn = tk.Button(leftLowerFrame, text="Eliminar conexión", command=lambda: self.delete_connection)
+
+        self.eliminarConexionBtn = tk.Button(leftLowerFrame, text="Eliminar conexión", command=lambda: self.delete_connection())
         self.eliminarConexionBtn.pack(pady=10)
+
         self.modificarConexionBtn = tk.Button(leftLowerFrame, text="Modificar conexión", command=lambda: self.show_modify_connection_form(middleFrame))
         self.modificarConexionBtn.pack(pady=10)
 
+        # Middle frame para formularios de agregar/modificar conexiones
         middleFrame = tk.Frame(root)
         middleFrame.config(width=500, height=400, bg="green")
         middleFrame.pack(side="right", fill="both", expand=True)
 
+    # Actualiza la lista de botones de las conexiones en el panel izquierdo
+    def update_connections(self):
+        # Eliminar todos los botones anteriores
+        for widget in self.leftUpperFrame.winfo_children():
+            widget.destroy()
+
+        # Crear botones para cada conexión
+        for connection_name in self.connections:
+            self.add_connection_button(connection_name)
+
+    # Formulario para nueva conexión
     def show_new_connection_form(self, middleFrame):
         for widget in middleFrame.winfo_children():
             widget.destroy()
 
+        # Variables para los campos de la nueva conexión
         self.name_var = tk.StringVar()
         self.username_var = tk.StringVar()
         self.password_var = tk.StringVar()
@@ -58,7 +73,7 @@ class SQLDeveloperEmulator:
         self.port_var = tk.StringVar(value="1527")
         self.sid_var = tk.StringVar(value="myNewDB")
 
-        # Widgets para replicar la interfaz de agregar conexión
+        # Crear los campos en el middleFrame
         tk.Label(middleFrame, text="Name").grid(row=0, column=0, padx=5, pady=5)
         tk.Entry(middleFrame, textvariable=self.name_var).grid(row=0, column=1, padx=5, pady=5)
 
@@ -80,9 +95,10 @@ class SQLDeveloperEmulator:
         tk.Button(middleFrame, text="Test", command=self.test_connection).grid(row=6, column=0, padx=5, pady=5)
         tk.Button(middleFrame, text="Connect", command=self.connect_to_database).grid(row=6, column=1, padx=5, pady=5)
 
+    # Probar la conexión
     def test_connection(self):
         try:
-            jdbc_driver = '/Users/coleexz/Documents/GitHub/PruebaPython/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
+            jdbc_driver = '/Users/coleexz/Documents/GitHub/ApacheDerbyDBMS/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
             driver_class = 'org.apache.derby.client.ClientAutoloadedDriver'
             db_url = f'jdbc:derby://{self.hostname_var.get()}:{self.port_var.get()}/{self.sid_var.get()};create=true'
             conn = jaydebeapi.connect(driver_class, db_url, [self.username_var.get(), self.password_var.get()], jdbc_driver)
@@ -91,14 +107,16 @@ class SQLDeveloperEmulator:
         except Exception as e:
             messagebox.showerror("Error de conexión", str(e))
 
+    # Conectar y guardar la conexión
     def connect_to_database(self):
         try:
-            jdbc_driver = '/Users/coleexz/Documents/GitHub/PruebaPython/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
+            jdbc_driver = '/Users/coleexz/Documents/GitHub/ApacheDerbyDBMS/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
             driver_class = 'org.apache.derby.client.ClientAutoloadedDriver'
             db_url = f'jdbc:derby://{self.hostname_var.get()}:{self.port_var.get()}/{self.sid_var.get()};create=true'
             self.conn = jaydebeapi.connect(driver_class, db_url, [self.username_var.get(), self.password_var.get()], jdbc_driver)
             messagebox.showinfo("Conexión exitosa", f"Conexión a {self.sid_var.get()} realizada correctamente")
 
+            # Guardar la conexión
             connection_info = {
                 "name": self.name_var.get(),
                 "username": self.username_var.get(),
@@ -108,24 +126,25 @@ class SQLDeveloperEmulator:
                 "sid": self.sid_var.get()
             }
             self.connections[self.name_var.get()] = connection_info
-
             self.combo.config(state="readonly")
-
-            self.add_connection_button(self.name_var.get())
+            self.update_connections()  # Actualiza los botones de conexiones
 
         except Exception as e:
             messagebox.showerror("Error de conexión", str(e))
 
+    # Agregar botón de conexión en leftUpperFrame
     def add_connection_button(self, connection_name):
         connection_button = tk.Button(self.leftUpperFrame, text=connection_name, command=lambda: self.select_connection(connection_name))
         connection_button.pack(pady=5, padx=5)
 
+    # Seleccionar conexión
     def select_connection(self, connection_name):
         self.selected_connection = connection_name
         messagebox.showinfo("Conexión seleccionada", f"Conexión {connection_name} seleccionada.")
 
+    # Mostrar formulario para modificar la conexión
     def show_modify_connection_form(self, middleFrame):
-        if not hasattr(self, 'selected_connection'):
+        if not self.selected_connection:
             messagebox.showwarning("Advertencia", "No hay ninguna conexión seleccionada.")
             return
 
@@ -142,7 +161,6 @@ class SQLDeveloperEmulator:
         self.port_var.set(connection_info["port"])
         self.sid_var.set(connection_info["sid"])
 
-        # Reutilizamos el formulario para modificar la conexión
         tk.Label(middleFrame, text="Name").grid(row=0, column=0, padx=5, pady=5)
         tk.Entry(middleFrame, textvariable=self.name_var).grid(row=0, column=1, padx=5, pady=5)
 
@@ -163,6 +181,7 @@ class SQLDeveloperEmulator:
 
         tk.Button(middleFrame, text="Guardar Cambios", command=lambda: self.save_modified_connection(connection_info["name"])).grid(row=6, column=1, padx=5, pady=5)
 
+    # Guardar los cambios de la conexión modificada
     def save_modified_connection(self, original_name):
         connection_info = {
             "name": self.name_var.get(),
@@ -172,19 +191,22 @@ class SQLDeveloperEmulator:
             "port": self.port_var.get(),
             "sid": self.sid_var.get()
         }
-
         del self.connections[original_name]
         self.connections[connection_info["name"]] = connection_info
         messagebox.showinfo("Conexión modificada", f"Conexión {original_name} ha sido modificada.")
+        self.update_connections()  # Actualizar las conexiones
 
+    # Eliminar conexión
     def delete_connection(self):
-        if not hasattr(self, 'selected_connection'):
+        if not self.selected_connection:
             messagebox.showwarning("Advertencia", "No hay ninguna conexión seleccionada.")
             return
-
         del self.connections[self.selected_connection]
         messagebox.showinfo("Conexión eliminada", f"Conexión {self.selected_connection} ha sido eliminada.")
+        self.selected_connection = None
+        self.update_connections()  # Actualizar las conexiones
 
+    # Cerrar la conexión con la base de datos
     def close_connection(self):
         if self.conn:
             self.conn.close()
