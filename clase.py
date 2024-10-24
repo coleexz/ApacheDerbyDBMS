@@ -47,8 +47,7 @@ class SQLDeveloperEmulator:
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        # Crear las tabs
-        titulos = ["Tablas", "Indices", "Procedimientos Almacenados", "Funciones Almacenadas","Triggers", "Vistas", "Checks", "Esquemas"]
+        titulos = ["Tablas", "Indices", "Procedimientos Almacenados", "Funciones Almacenadas","Triggers", "Vistas", "Checks", "Esquemas", "Query"]
         for titulo in titulos:
             self.crear_tab(titulo)
 
@@ -69,10 +68,15 @@ class SQLDeveloperEmulator:
         sub_notebook = ttk.Notebook(tab)
         sub_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        operations = ["Listar", "Crear", "Modificar", "Borrar"]
+        if titulo == "Query":
+            operations = ["Console"]
+        else:
+            operations = ["Listar", "Crear", "Modificar", "Borrar"]
+
         for operation in operations:
             sub_tab = ttk.Frame(sub_notebook)
             sub_notebook.add(sub_tab, text=operation)
+
             if operation == "Listar":
                 btn_listar = tk.Button(sub_tab, text="Ejecutar", bg="#3e3e3e", fg="black", command=lambda t=titulo: self.list_items(t))
                 btn_listar.pack(pady=5)
@@ -82,70 +86,115 @@ class SQLDeveloperEmulator:
                 elif operation == "Modificar":
                     self.modify_table_form(sub_tab)
                 elif operation == "Borrar":
-                        self.delete_table_form(sub_tab)
+                    self.delete_table_form(sub_tab)
             elif titulo == "Indices":
                 if operation == "Crear":
-                        self.create_index_form(sub_tab)
+                    self.create_index_form(sub_tab)
                 elif operation == "Modificar":
-                        self.modify_index_form(sub_tab)
+                    self.modify_index_form(sub_tab)
                 elif operation == "Borrar":
-                        self.delete_index_form(sub_tab)
+                    self.delete_index_form(sub_tab)
             elif titulo == "Procedimientos Almacenados":
-                 if operation == "Crear":
-                        self.create_stored_procedure_form(sub_tab)
-                 elif operation == "Modificar":
-                        self.modify_stored_procedure_form(sub_tab)
-                 elif operation == "Borrar":
-                        self.delete_stored_procedure_form(sub_tab)
+                if operation == "Crear":
+                    self.create_stored_procedure_form(sub_tab)
+                elif operation == "Modificar":
+                    self.modify_stored_procedure_form(sub_tab)
+                elif operation == "Borrar":
+                    self.delete_stored_procedure_form(sub_tab)
             elif titulo == "Funciones Almacenadas":
                 if operation == "Crear":
-                        self.create_stored_function_form(sub_tab)
+                    self.create_stored_function_form(sub_tab)
                 elif operation == "Modificar":
-                        self.show_modify_stored_function_form(sub_tab)
+                    self.show_modify_stored_function_form(sub_tab)
                 elif operation == "Borrar":
-                        self.delete_stored_function_form(sub_tab)
+                    self.delete_stored_function_form(sub_tab)
             elif titulo == "Triggers":
                 if operation == "Crear":
-                        self.create_trigger_form(sub_tab)
+                    self.create_trigger_form(sub_tab)
                 elif operation == "Modificar":
-                        self.modify_trigger_form(sub_tab)
+                    self.modify_trigger_form(sub_tab)
                 elif operation == "Borrar":
-                        self.delete_trigger_form(sub_tab)
+                    self.delete_trigger_form(sub_tab)
             elif titulo == "Vistas":
                 if operation == "Crear":
-                        self.create_view_form(sub_tab)
+                    self.create_view_form(sub_tab)
                 elif operation == "Modificar":
-                        self.modify_view_form(sub_tab)
+                    self.modify_view_form(sub_tab)
                 elif operation == "Borrar":
-                        self.delete_view_form(sub_tab)
+                    self.delete_view_form(sub_tab)
             elif titulo == "Checks":
                 if operation == "Crear":
-                        self.create_check_form(sub_tab)
+                    self.create_check_form(sub_tab)
                 elif operation == "Modificar":
-                        self.modify_check_form(sub_tab)
+                    self.modify_check_form(sub_tab)
                 elif operation == "Borrar":
-                        self.delete_check_form(sub_tab)
+                    self.delete_check_form(sub_tab)
             elif titulo == "Esquemas":
                 if operation == "Crear":
-                        self.create_schema_form(sub_tab)
+                    self.create_schema_form(sub_tab)
                 elif operation == "Modificar":
-                        self.modify_schema_form(sub_tab)
+                    self.modify_schema_form(sub_tab)
                 elif operation == "Borrar":
-                        self.delete_schema_form(sub_tab)
+                    self.delete_schema_form(sub_tab)
+            elif titulo == "Query":
+                self.create_query_form(sub_tab)
 
 #=======================================================================================================================
-#CREATE-FORMS
+#CREATE FORMS
+
+    def create_query_form(self, parent):
+        tk.Label(parent, text="Escribe tu Query:", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+
+        query_input = tk.Text(parent, height=5, bg="#2e2e2e", fg="white", insertbackground="white")
+        query_input.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="we")
+
+        def execute_query():
+            print("Ejecutando query...")
+            query = query_input.get("1.0", tk.END).strip()
+            if not query:
+                messagebox.showerror("Error", "Debe ingresar una consulta.")
+                return
+
+            try:
+                if not self.conn:
+                    messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el query.")
+                    return
+
+                cursor = self.conn.cursor()
+
+                cursor.execute(query)
+
+                if query.lower().startswith("select"):
+                    results = cursor.fetchall()
+                    result_text = ""
+
+                    for row in results:
+                        result_text += f"{row}\n"
+
+                    self.resultado_text.delete(1.0, tk.END)
+                    self.resultado_text.insert(tk.END, result_text or "Consulta ejecutada con éxito.")
+                else:
+                    self.conn.commit()
+                    self.resultado_text.delete(1.0, tk.END)
+                    self.resultado_text.insert(tk.END, "Consulta ejecutada con éxito.")
+
+                cursor.close()
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al ejecutar el query: {str(e)}")
+
+        tk.Button(parent, text="Ejecutar", command=execute_query, bg="#3e3e3e", fg="black").grid(row=2, column=0, padx=5, pady=10, sticky="e")
+
+
     def create_table_form(self, parent):
-        # Crear el título y entrada para el nombre de la tabla
         tk.Label(parent, text="Nombre de la Tabla:", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         table_name_var = tk.StringVar()
         tk.Entry(parent, textvariable=table_name_var, bg="#2e2e2e", fg="white").grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        # Crear el frame para las columnas
         column_frame = tk.Frame(parent, bg="#2e2e2e")
         column_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky="w")
 
-        # Crear el Treeview para agregar las columnas
         columns_tree = ttk.Treeview(column_frame, columns=("name", "data_type", "size", "not_null"), show="headings", height=6)
         columns_tree.grid(row=1, column=0, columnspan=5, pady=5)
         columns_tree.heading("name", text="Nombre")
@@ -153,14 +202,12 @@ class SQLDeveloperEmulator:
         columns_tree.heading("size", text="Tamaño")
         columns_tree.heading("not_null", text="Not Null")
 
-        # Función para agregar columnas
         def add_column():
             if not name_var.get() or not data_type_var.get() or not size_var.get():
                 messagebox.showerror("Error", "Debe ingresar el nombre, tipo de dato y tamaño de la columna.")
                 return
             columns_tree.insert("", "end", values=(name_var.get(), data_type_var.get(), size_var.get(), "NOT NULL" if not_null_var.get() else ""))
 
-        # Función para eliminar columnas seleccionadas
         def delete_column():
             selected_item = columns_tree.selection()
             if selected_item:
@@ -182,7 +229,6 @@ class SQLDeveloperEmulator:
         tk.Button(column_frame, text="Agregar Columna", command=add_column, bg="#3e3e3e", fg="black").grid(row=2, column=4, padx=5, pady=5)
         tk.Button(column_frame, text="Eliminar Columna", command=delete_column, bg="#3e3e3e", fg="black").grid(row=3, column=4, padx=5, pady=5)
 
-        # Función para generar el DDL, mostrarlo en query_text y ejecutarlo
         def create_table():
             if not self.conn:
                 messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
@@ -194,84 +240,71 @@ class SQLDeveloperEmulator:
                 table_name = table_name_var.get()
                 columns = [columns_tree.item(item, "values") for item in columns_tree.get_children()]
 
-                # Generar DDL
                 ddl = f"CREATE TABLE {table_name} (\n"
                 column_definitions = []
                 for col in columns:
-                    column_def = f"  {col[0]} {col[1]}({col[2]})"
-                    if col[3]:  # Si es NOT NULL
+                    if col[1] == "INT" or col[1] == "FLOAT":
+                        column_def = f"  {col[0]} {col[1]}"
+                    else:
+                        column_def = f"  {col[0]} {col[1]}({col[2]})"
+                    if col[3]:
                         column_def += " NOT NULL"
                     column_definitions.append(column_def)
                 ddl += ",\n".join(column_definitions) + "\n)"
 
-                # Mostrar el DDL en query_text
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, ddl)
 
-                # Ejecutar el DDL
                 cursor.execute(ddl)
                 self.conn.commit()
 
-                # Mostrar mensaje de éxito en resultado_text
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Tabla '{table_name}' creada exitosamente.")
 
             except Exception as e:
-                # Mostrar el error en resultado_text en caso de que la ejecución falle
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Error al crear la tabla: {str(e)}")
 
             finally:
-                # Cerrar el cursor
                 cursor.close()
 
-        # Botón OK para crear la tabla y mostrar el DDL
+
         tk.Button(parent, text="OK", command=create_table, bg="#3e3e3e", fg="black").grid(row=4, column=0, padx=5, pady=10, sticky="e")
         tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=4, column=1, padx=5, pady=10, sticky="w")
 
 
     def create_trigger_form(self, parent):
         tk.Label(parent, text="Crear Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for trigger creation
 
     def create_check_form(self, parent):
         tk.Label(parent, text="Crear Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for check creation
 
     def create_view_form(self, parent):
         tk.Label(parent, text="Crear Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for view creation
 
     def create_schema_form(self, parent):
         tk.Label(parent, text="Crear Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for schema creation
 
 #=======================================================================================================================
 #MODIFY-FORMS
     def modify_table_form(self, parent):
 
-    # Crear el título y un Combobox para seleccionar la tabla
         tk.Label(parent, text="Seleccione la Tabla:", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
-        # Variable para almacenar la tabla seleccionada
         table_name_var = tk.StringVar()
         table_name_combobox = ttk.Combobox(parent, textvariable=table_name_var, state="readonly")
         table_name_combobox.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        # Botón para cargar las tablas
         tk.Button(parent, text="Cargar Tablas", command=lambda: self.load_tables(table_name_combobox), bg="#3e3e3e", fg="black").grid(row=0, column=2, padx=5, pady=5)
 
-        # Crear el frame para las columnas
         ddl_frame = tk.Frame(parent, bg="#2e2e2e")
         ddl_frame.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="w")
 
-        # Cuadro de texto para mostrar el DDL
         ddl_text = tk.Text(ddl_frame, height=10, bg="#1e1e1e", fg="white", insertbackground="white")
         ddl_text.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
 
-        # Función para cargar el DDL de la tabla seleccionada
         def load_table_ddl():
-            table_name = table_name_var.get()  # Obtener el nombre de la tabla seleccionada
+            table_name = table_name_var.get()
             if not table_name:
                 messagebox.showerror("Error", "Debe seleccionar una tabla para obtener su DDL.")
                 return
@@ -279,21 +312,18 @@ class SQLDeveloperEmulator:
             try:
                 cursor = self.conn.cursor()
 
-                # Obtener las columnas de la tabla seleccionada
                 cursor.execute(f"SELECT * FROM SYS.SYSCOLUMNS WHERE REFERENCEID IN (SELECT TABLEID FROM SYS.SYSTABLES WHERE TABLENAME = '{table_name}')")
                 columns = cursor.fetchall()
 
-                # Generar DDL
                 ddl = f"CREATE TABLE {table_name} (\n"
                 column_definitions = []
                 for col in columns:
                     column_def = f"  {col[0]} {col[1]}"
-                    if col[2] == "NO":  # Si es NOT NULL
+                    if col[2] == "NO":
                         column_def += " NOT NULL"
                     column_definitions.append(column_def)
                 ddl += ",\n".join(column_definitions) + "\n);"
 
-                # Mostrar el DDL en el cuadro de texto
                 ddl_text.delete(1.0, tk.END)
                 ddl_text.insert(tk.END, ddl)
 
@@ -302,26 +332,20 @@ class SQLDeveloperEmulator:
             except Exception as e:
                 messagebox.showerror("Error", f"Ocurrió un error al obtener el DDL de la tabla: {str(e)}")
 
-        # Botón para cargar el DDL de la tabla seleccionada
         tk.Button(parent, text="Cargar DDL", command=load_table_ddl, bg="#3e3e3e", fg="black").grid(row=2, column=2, padx=5, pady=5)
 
-        # Función para ejecutar el DDL
         def execute_ddl():
             try:
                 cursor = self.conn.cursor()
 
-                # Obtener el DDL del cuadro de texto
                 ddl = ddl_text.get(1.0, tk.END).strip()
 
-                # Mostrar el DDL en query_text
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, ddl)
 
-                # Ejecutar el DDL
                 cursor.execute(ddl)
                 self.conn.commit()
 
-                # Mostrar mensaje de éxito en resultado_text
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, "DDL ejecutado exitosamente.")
 
@@ -331,7 +355,6 @@ class SQLDeveloperEmulator:
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Error al ejecutar el DDL: {str(e)}")
 
-        # Botón para ejecutar el DDL
         tk.Button(parent, text="Ejecutar DDL", command=execute_ddl, bg="#3e3e3e", fg="black").grid(row=4, column=0, padx=5, pady=10, sticky="e")
         tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=4, column=1, padx=5, pady=10, sticky="w")
 
@@ -342,7 +365,6 @@ class SQLDeveloperEmulator:
             cursor.execute("SELECT TABLENAME FROM SYS.SYSTABLES WHERE TABLETYPE='T'")
             tables = cursor.fetchall()
 
-            # Limpiar combobox antes de llenarlo con las tablas
             table_combobox['values'] = [table[0] for table in tables]
             if tables:
                 table_combobox.current(0)
@@ -354,42 +376,31 @@ class SQLDeveloperEmulator:
 
     def modify_trigger_form(self, parent):
         tk.Label(parent, text="Modificar Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for trigger modification
 
     def modify_check_form(self, parent):
         tk.Label(parent, text="Modificar Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for check modification
 
     def modify_view_form(self, parent):
         tk.Label(parent, text="Modificar Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for view modification
 
     def modify_schema_form(self, parent):
         tk.Label(parent, text="Modificar Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for schema modification
 
 #=======================================================================================================================
 #DELETE-FORMS
     def delete_table_form(self, parent):
-        # Crear el título
         tk.Label(parent, text="Eliminar Tabla", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
-        # Frame para las tablas disponibles
         table_frame = tk.Frame(parent, bg="#2e2e2e")
         table_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-        # Label para indicar la selección de tabla
         tk.Label(parent, text="Seleccione una tabla:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
 
-        # Combobox para seleccionar la tabla a eliminar
         selected_table_var = tk.StringVar()
         self.table_combobox = ttk.Combobox(parent, textvariable=selected_table_var, state="readonly")
         self.table_combobox.grid(row=1, column=1, padx=5, pady=5)
 
-        # Botón para cargar las tablas disponibles
         tk.Button(parent, text="Cargar Tablas", command=lambda: self.load_tables(self.table_combobox), bg="#3e3e3e", fg="black").grid(row=2, column=1, padx=5, pady=5)
-
-        # Función para eliminar la tabla seleccionada
 
         def delete_table():
             table_name = selected_table_var.get()
@@ -399,33 +410,22 @@ class SQLDeveloperEmulator:
                 return
 
             try:
-                # Obtener cursor de la conexión
                 cursor = self.conn.cursor()
-
-                # Generar DDL para eliminar la tabla
                 ddl = f"DROP TABLE {table_name}"
-
-                # Mostrar el DDL en query_text
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, ddl)
-
-                # Ejecutar el DDL
                 cursor.execute(ddl)
                 self.conn.commit()
 
-                # Mostrar mensaje de éxito en resultado_text
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Tabla '{table_name}' eliminada exitosamente.")
 
-                # Cerrar el cursor
                 cursor.close()
 
             except Exception as e:
-                # Mostrar el error en resultado_text si falla
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Error al eliminar la tabla: {str(e)}")
 
-        # Botón para eliminar la tabla seleccionada
         tk.Button(parent, text="Eliminar", command=delete_table, bg="#3e3e3e", fg="black").grid(row=3, column=0, padx=5, pady=10, sticky="e")
         tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=3, column=1, padx=5, pady=10, sticky="w")
 
@@ -437,7 +437,6 @@ class SQLDeveloperEmulator:
             cursor.execute("SELECT tablename FROM sys.systables WHERE tabletype='T'")
             tables = cursor.fetchall()
 
-            # Limpiar combobox antes de llenarlo con las tablas
             table_combobox['values'] = [table[0] for table in tables]
             if tables:
                 table_combobox.current(0)
@@ -449,20 +448,15 @@ class SQLDeveloperEmulator:
 
     def delete_trigger_form(self, parent):
         tk.Label(parent, text="Borrar Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for trigger deletion
 
     def delete_check_form(self, parent):
         tk.Label(parent, text="Borrar Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for check deletion
 
     def delete_view_form(self, parent):
         tk.Label(parent, text="Borrar Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for view deletion
 
     def delete_schema_form(self, parent):
         tk.Label(parent, text="Borrar Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-        # Add form elements for schema deletion
-
 
 #=======================================================================================================================
 #DATABASE-OPERATIONS
@@ -743,27 +737,89 @@ class SQLDeveloperEmulator:
         tk.Label(parent, text="Crear Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
         tk.Label(parent, text="Nombre del Procedimiento", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
-        procedure_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=procedure_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+        self.procedure_name_var = tk.StringVar()
+        tk.Entry(parent, textvariable=self.procedure_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
 
-        tk.Label(parent, text="Código del Procedimiento", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5)
-        procedure_code_text = tk.Text(parent, height=10, bg="#2e2e2e", fg="white")
-        procedure_code_text.grid(row=2, column=1, padx=5, pady=5)
+        column_frame = tk.Frame(parent, bg="#2e2e2e")
+        column_frame.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="w")
 
-        tk.Button(parent, text="Crear Procedimiento", bg="#3e3e3e", fg="black", command=lambda: self.create_stored_procedure(procedure_name_var.get(), procedure_code_text.get("1.0", tk.END))).grid(row=3, column=0, columnspan=2, pady=10)
+        self.columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type"), show="headings", height=6)
+        self.columns_tree.grid(row=1, column=0, columnspan=3, pady=5)
+        self.columns_tree.heading("name", text="Nombre")
+        self.columns_tree.heading("mode", text="Modo")
+        self.columns_tree.heading("data_type", text="Tipo de Dato")
 
-    def modify_stored_procedure_form(self, parent):
-        tk.Label(parent, text="Modificar Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+        name_var = tk.StringVar()
+        tk.Entry(column_frame, textvariable=name_var, width=15, bg="white", fg="black").grid(row=2, column=0, padx=5, pady=5)
 
-        tk.Label(parent, text="Nombre del Procedimiento", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
-        procedure_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=procedure_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+        mode_var = tk.StringVar()
+        mode_combobox = ttk.Combobox(column_frame, textvariable=mode_var, values=["IN", "OUT", "INOUT"], state="readonly")
+        mode_combobox.grid(row=2, column=1, padx=5, pady=5)
 
-        tk.Label(parent, text="Nuevo Código del Procedimiento", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5)
-        procedure_code_text = tk.Text(parent, height=10, bg="#2e2e2e", fg="white")
-        procedure_code_text.grid(row=2, column=1, padx=5, pady=5)
+        data_type_var = tk.StringVar()
+        data_type_combobox = ttk.Combobox(column_frame, textvariable=data_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly")
+        data_type_combobox.grid(row=2, column=2, padx=5, pady=5)
 
-        tk.Button(parent, text="Modificar Procedimiento", bg="#3e3e3e", fg="black", command=lambda: self.modify_stored_procedure(procedure_name_var.get(), procedure_code_text.get("1.0", tk.END))).grid(row=3, column=0, columnspan=2, pady=10)
+        def add_column():
+            if not name_var.get() or not mode_var.get() or not data_type_var.get():
+                messagebox.showerror("Error", "Debe ingresar todos los valores del atributo.")
+                return
+            self.columns_tree.insert("", "end", values=(name_var.get(), mode_var.get(), data_type_var.get()))
+
+        def delete_column():
+            selected_item = self.columns_tree.selection()
+            if selected_item:
+                self.columns_tree.delete(selected_item)
+
+        button_frame = tk.Frame(column_frame, bg="#2e2e2e")
+        button_frame.grid(row=3, column=0, columnspan=3, pady=5, sticky="ew")
+
+        tk.Button(button_frame, text="Agregar Atributo", command=add_column, bg="#3e3e3e", fg="black").pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Eliminar Atributo", command=delete_column, bg="#3e3e3e", fg="black").pack(side=tk.LEFT, padx=5)
+
+        tk.Button(parent, text="Crear Procedimiento", command=self.create_stored_procedure, bg="#3e3e3e", fg="black").grid(row=3, column=0, padx=5, pady=10)
+
+    def create_stored_procedure(self):
+        procedure_name = self.procedure_name_var.get()
+        if not procedure_name:
+            messagebox.showerror("Error", "Debe ingresar el nombre del procedimiento.")
+            return
+
+        parameters = [self.columns_tree.item(item, "values") for item in self.columns_tree.get_children()]
+        param_definitions = []
+
+        for param in parameters:
+            param_mode = param[1]
+            param_name = param[0]
+            param_type = param[2]
+
+            param_def = f"{param_mode} {param_name} {param_type}"
+            param_definitions.append(param_def)
+
+        ddl = f"""
+        CREATE PROCEDURE {procedure_name} (
+            {', '.join(param_definitions)}
+        )
+        PARAMETER STYLE JAVA
+        LANGUAGE JAVA
+        EXTERNAL NAME 'my.package.MyClass.myMethod'
+        """
+
+        self.query_text.delete(1.0, tk.END)
+        self.query_text.insert(tk.END, ddl)
+
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(ddl)
+            self.conn.commit()
+            cursor.close()
+
+            self.resultado_text.delete(1.0, tk.END)
+            self.resultado_text.insert(tk.END, f"Procedimiento '{procedure_name}' creado exitosamente.")
+
+        except Exception as e:
+            self.resultado_text.delete(1.0, tk.END)
+            self.resultado_text.insert(tk.END, f"Error al crear el procedimiento: {str(e)}")
 
     def delete_stored_procedure_form(self, parent):
         tk.Label(parent, text="Borrar Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
@@ -774,33 +830,135 @@ class SQLDeveloperEmulator:
 
         tk.Button(parent, text="Borrar Procedimiento", bg="#3e3e3e", fg="black", command=lambda: self.delete_stored_procedure(procedure_name_var.get())).grid(row=2, column=0, columnspan=2, pady=10)
 
-
     def create_stored_function_form(self, parent):
-        tk.Label(parent, text="Crear Función", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+        tk.Label(parent, text="Crear Función", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=3, pady=3, sticky="w")
 
-        tk.Label(parent, text="Nombre", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
+        tk.Label(parent, text="Nombre de la Función", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=3, pady=3, sticky="w")
         function_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=function_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+        tk.Entry(parent, textvariable=function_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=3, pady=3, sticky="w")
 
-        tk.Label(parent, text="Tipo de Retorno", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5)
+        tk.Label(parent, text="Tipo de Retorno", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=3, pady=3, sticky="w")
         return_type_var = tk.StringVar()
-        tk.Entry(parent, textvariable=return_type_var, bg="#2e2e2e", fg="white").grid(row=2, column=1, padx=5, pady=5)
+        tk.Entry(parent, textvariable=return_type_var, bg="#2e2e2e", fg="white").grid(row=2, column=1, padx=3, pady=3, sticky="w")
 
-        tk.Label(parent, text="Parámetros", bg="#2e2e2e", fg="white").grid(row=3, column=0, padx=5, pady=5)
-        parameters_text = tk.Text(parent, height=4, bg="#2e2e2e", fg="white")
-        parameters_text.grid(row=3, column=1, padx=5, pady=5)
+        column_frame = tk.Frame(parent, bg="#2e2e2e")
+        column_frame.grid(row=3, column=0, columnspan=2, padx=3, pady=3, sticky="w")
 
-        tk.Button(parent, text="Crear", bg="#3e3e3e", fg="black", command=lambda: self.create_stored_function(function_name_var.get(), return_type_var.get(), parameters_text.get("1.0", tk.END))).grid(row=4, column=0, columnspan=2, pady=10)
+        columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type", "default_value"), show="headings", height=6)
+        columns_tree.grid(row=1, column=0, columnspan=5, pady=3)
+        columns_tree.heading("name", text="Nombre")
+        columns_tree.heading("mode", text="Modo")
+        columns_tree.heading("data_type", text="Tipo de Dato")
+        columns_tree.heading("default_value", text="Valor por Defecto")
 
+
+        def add_parameter():
+            if not param_name_var.get() or not param_mode_var.get() or not param_data_type_var.get():
+                messagebox.showerror("Error", "Debe ingresar todos los campos del parámetro.")
+                return
+            columns_tree.insert("", "end", values=(param_name_var.get(), param_mode_var.get(), param_data_type_var.get(), param_default_var.get()))
+
+        def delete_parameter():
+            selected_item = columns_tree.selection()
+            if selected_item:
+                columns_tree.delete(selected_item)
+
+        param_name_var = tk.StringVar()
+        tk.Entry(column_frame, textvariable=param_name_var, width=15, bg="white", fg="black").grid(row=2, column=0, padx=3, pady=3)
+
+        param_mode_var = tk.StringVar()
+        mode_combobox = ttk.Combobox(column_frame, textvariable=param_mode_var, values=["IN", "OUT", "INOUT"], state="readonly")
+        mode_combobox.grid(row=2, column=1, padx=3, pady=3)
+
+        param_data_type_var = tk.StringVar()
+        data_type_combobox = ttk.Combobox(column_frame, textvariable=param_data_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly")
+        data_type_combobox.grid(row=2, column=2, padx=3, pady=3)
+
+        param_default_var = tk.StringVar()
+        tk.Entry(column_frame, textvariable=param_default_var, width=10, bg="white", fg="black").grid(row=2, column=3, padx=3, pady=3)
+
+        tk.Button(column_frame, text="Agregar Parámetro", command=add_parameter, bg="#3e3e3e", fg="black").grid(row=3, column=4, padx=3, pady=3)
+        tk.Button(column_frame, text="Eliminar Parámetro", command=delete_parameter, bg="#3e3e3e", fg="black").grid(row=4, column=4, padx=3, pady=3)
+
+        def create_function():
+            if not self.conn:
+                messagebox.showerror("Error", "Debe seleccionar una conexión.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+                function_name = function_name_var.get()
+                return_type = return_type_var.get()
+                parameters = [columns_tree.item(item, "values") for item in columns_tree.get_children()]
+
+                ddl = f"CREATE FUNCTION {function_name} ("
+                param_definitions = []
+                for param in parameters:
+                    param_definitions.append(f"{param[0]} {param[2]}")
+                ddl += ", ".join(param_definitions)
+                ddl += f") RETURNS {return_type} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'your.java.classpath'"
+
+                self.query_text.delete(1.0, tk.END)
+                self.query_text.insert(tk.END, ddl)
+
+                cursor.execute(ddl)
+                self.conn.commit()
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Función {function_name} creada exitosamente.")
+                cursor.close()
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al crear la función: {str(e)}")
+
+
+        tk.Button(parent, text="Crear Función", command=create_function, bg="#3e3e3e", fg="black").grid(row=5, column=0, padx=3, pady=3, sticky="e")
+        tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=5, column=1, padx=3, pady=3, sticky="w")
 
     def show_modify_stored_function_form(self, parent):
-        tk.Label(parent, text="Modificar Función", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+        tk.Label(parent, text="Seleccione la Función:", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
-        tk.Label(parent, text="Nombre de la Función", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
         function_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=function_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+        function_combobox = ttk.Combobox(parent, textvariable=function_name_var, state="readonly")
+        function_combobox.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        tk.Button(parent, text="Obtener DDL", bg="#3e3e3e", fg="black", command=lambda: self.get_function_ddl(function_name_var.get())).grid(row=2, column=0, columnspan=2, pady=10)
+        tk.Button(parent, text="Cargar Funciones", command=lambda: self.load_functions(function_combobox), bg="#3e3e3e", fg="black").grid(row=0, column=2, padx=5, pady=5)
+
+        tk.Label(parent, text="DDL de la Función:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        ddl_textbox = tk.Text(parent, height=10, bg="#2e2e2e", fg="white", insertbackground="white")
+        ddl_textbox.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="we")
+
+        def generate_ddl():
+            function_name = function_name_var.get()
+            if not function_name:
+                messagebox.showerror("Error", "Debe seleccionar una función para generar el DDL.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(f"SELECT FUNCTION_DEFINITION FROM SYS.SYSFUNCS WHERE ALIAS = '{function_name}'")
+                ddl = cursor.fetchone()[0]
+
+                ddl_textbox.delete(1.0, tk.END)
+                ddl_textbox.insert(tk.END, ddl)
+
+                cursor.close()
+
+            except Exception as e:
+                ddl_textbox.delete(1.0, tk.END)
+                ddl_textbox.insert(tk.END, f"Error al obtener el DDL de la función: {str(e)}")
+
+        tk.Button(parent, text="Generar DDL", command=generate_ddl, bg="#3e3e3e", fg="black").grid(row=3, column=0, columnspan=3, padx=5, pady=10, sticky="e")
+
+        def execute_ddl():
+            new_ddl = ddl_textbox.get("1.0", tk.END).strip()
+            if not new_ddl:
+                messagebox.showerror("Error", "Debe generar o modificar el DDL antes de ejecutarlo.")
+                return
+
+            self.modify_stored_function(function_name_var.get(), new_ddl)
+
+        tk.Button(parent, text="Ejecutar DDL", command=execute_ddl, bg="#3e3e3e", fg="black").grid(row=4, column=0, columnspan=3, padx=5, pady=10, sticky="e")
 
 
     def delete_stored_function_form(self, parent):
@@ -812,23 +970,53 @@ class SQLDeveloperEmulator:
 
         tk.Button(parent, text="Borrar", bg="#3e3e3e", fg="black", command=lambda: self.delete_function(function_name_var.get())).grid(row=2, column=0, columnspan=2, pady=10)
 
-    def create_stored_procedure(self, name, code):
-        if not self.conn:
-            messagebox.showerror("Error", "No hay ninguna conexión establecida.")
-            return
 
+    def modify_stored_procedure_form(self, parent):
+        tk.Label(parent, text="Modificar Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        tk.Label(parent, text="Nombre del Procedimiento", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
+
+        procedure_name_var = tk.StringVar()
+        procedure_combobox = ttk.Combobox(parent, textvariable=procedure_name_var, state="readonly")
+        procedure_combobox.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(parent, text="Cargar Procedimientos", command=lambda: self.load_procedures(procedure_combobox), bg="#3e3e3e", fg="black").grid(row=1, column=2, padx=5, pady=5)
+
+        tk.Button(parent, text="Cargar DDL", command=lambda: self.get_procedure_ddl(procedure_name_var.get()), bg="#3e3e3e", fg="black").grid(row=2, column=0, columnspan=2, pady=10)
+
+        procedure_code_text = tk.Text(parent, height=10, bg="#2e2e2e", fg="white")
+        procedure_code_text.grid(row=3, column=0, columnspan=3, padx=5, pady=5)
+
+        tk.Button(parent, text="Modificar Procedimiento", bg="#3e3e3e", fg="black", command=lambda: self.modify_stored_procedure(procedure_name_var.get(), procedure_code_text.get("1.0", tk.END))).grid(row=4, column=0, columnspan=2, pady=10)
+
+
+    def load_procedures(self, combobox):
         try:
             cursor = self.conn.cursor()
-            query = f"CREATE PROCEDURE {name} AS {code}"
+            cursor.execute("SELECT ALIAS FROM SYS.SYSALIASES WHERE ALIASTYPE = 'P'")
+            procedures = cursor.fetchall()
+            procedure_names = [proc[0] for proc in procedures]
+            combobox['values'] = procedure_names
+            cursor.close()
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al cargar los procedimientos: {str(e)}")
+
+
+    def get_procedure_ddl(self, procedure_name):
+        if not procedure_name:
+            messagebox.showerror("Error", "Debe seleccionar un procedimiento.")
+            return
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(f"SELECT ALIASINFO FROM SYS.SYSALIASES WHERE ALIAS = '{procedure_name}'")
+            ddl = cursor.fetchone()
             self.query_text.delete(1.0, tk.END)
-            self.query_text.insert(tk.END, query)
-            cursor.execute(query)
-            self.resultado_text.delete(1.0, tk.END)
-            self.resultado_text.insert(tk.END, f"Procedimiento {name} creado exitosamente.")
+            self.query_text.insert(tk.END, ddl[0] if ddl else "No se encontró el DDL.")
             cursor.close()
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
-            self.resultado_text.insert(tk.END, f"Error al crear el procedimiento: {str(e)}")
+            self.resultado_text.insert(tk.END, f"Error al obtener el DDL: {str(e)}")
+
 
     def modify_stored_procedure(self, name, new_code):
         if not self.conn:
@@ -849,6 +1037,7 @@ class SQLDeveloperEmulator:
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al modificar el procedimiento: {str(e)}")
+
 
     def delete_stored_procedure(self, name):
         if not self.conn:
@@ -896,16 +1085,43 @@ class SQLDeveloperEmulator:
             return
         try:
             cursor = self.conn.cursor()
-            query = f"CREATE FUNCTION {name} RETURNS {return_type} AS $$ BEGIN -- function body here END $$ LANGUAGE plpgsql;"
+
+            query = f"CREATE FUNCTION {name}({parameters}) RETURNS {return_type} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'Class.method';"
+
             self.query_text.delete(1.0, tk.END)
             self.query_text.insert(tk.END, query)
+
             cursor.execute(query)
+            self.conn.commit()
+
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Función {name} creada exitosamente.")
             cursor.close()
+
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al crear la función: {str(e)}")
+
+
+    def load_functions(self, combobox):
+        try:
+            if not self.conn:
+                messagebox.showerror("Error", "No hay ninguna conexión establecida.")
+                return
+
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT ALIAS FROM SYS.SYSALIASES WHERE ALIASTYPE = 'F'")
+            functions = cursor.fetchall()
+
+            combobox['values'] = [func[0] for func in functions]
+            if functions:
+                combobox.current(0)
+
+            cursor.close()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al cargar las funciones: {str(e)}")
+
 
     def modify_stored_function(self, name, new_code):
         if not self.conn:
@@ -914,21 +1130,23 @@ class SQLDeveloperEmulator:
 
         try:
             cursor = self.conn.cursor()
+
             drop_query = f"DROP FUNCTION {name}"
-            create_query = f"CREATE FUNCTION {name} RETURNS INTEGER AS {new_code}"
+            create_query = new_code
+
             self.query_text.delete(1.0, tk.END)
             self.query_text.insert(tk.END, f"{drop_query};\n{create_query}")
             cursor.execute(drop_query)
             cursor.execute(create_query)
+            self.conn.commit()
+
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Función {name} modificada exitosamente.")
             cursor.close()
+
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al modificar la función: {str(e)}")
-
-
-
 
     def delete_function(self, name):
         if not self.conn:
@@ -1079,7 +1297,6 @@ class SQLDeveloperEmulator:
 
         try:
             cursor = self.conn.cursor()
-            # No existe un comando directo para modificar un índice en Derby, se debe eliminar y crear uno nuevo
             drop_query = f"DROP INDEX {index_name}"
             create_query = f"CREATE INDEX {index_name} ON {new_table_name} ({new_columns})"
             self.query_text.delete(1.0, tk.END)
