@@ -149,8 +149,8 @@ class SQLDeveloperEmulator:
         query_input.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="we")
 
         def execute_query():
-            print("Ejecutando query...")
             query = query_input.get("1.0", tk.END).strip()
+
             if not query:
                 messagebox.showerror("Error", "Debe ingresar una consulta.")
                 return
@@ -160,10 +160,15 @@ class SQLDeveloperEmulator:
                     messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el query.")
                     return
 
+                # Mostrar el query en el área de texto correspondiente
+                self.query_text.delete(1.0, tk.END)
+                self.query_text.insert(tk.END, query)
+
                 cursor = self.conn.cursor()
 
                 cursor.execute(query)
 
+                # Si es una consulta SELECT, mostrar los resultados
                 if query.lower().startswith("select"):
                     results = cursor.fetchall()
                     result_text = ""
@@ -172,8 +177,9 @@ class SQLDeveloperEmulator:
                         result_text += f"{row}\n"
 
                     self.resultado_text.delete(1.0, tk.END)
-                    self.resultado_text.insert(tk.END, result_text or "Consulta ejecutada con éxito.")
+                    self.resultado_text.insert(tk.END, result_text if result_text else "No hay resultados para mostrar.")
                 else:
+                    # Para otros tipos de consultas como INSERT, UPDATE, DELETE
                     self.conn.commit()
                     self.resultado_text.delete(1.0, tk.END)
                     self.resultado_text.insert(tk.END, "Consulta ejecutada con éxito.")
@@ -273,14 +279,166 @@ class SQLDeveloperEmulator:
         tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=4, column=1, padx=5, pady=10, sticky="w")
 
 
+    def update_schema(self):
+        if self.selected_connection:
+            connection_info = self.connections[self.selected_connection]
+            schema = connection_info.get("schema", "")
+            self.schema_var.set(schema)
+
+
     def create_trigger_form(self, parent):
-        tk.Label(parent, text="Crear Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+        tk.Label(parent, text="Crear Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=2, pady=2)
+
+        tk.Label(parent, text="Nombre:", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=2, pady=2, sticky="e")
+        trigger_name_var = tk.StringVar()
+        tk.Entry(parent, textvariable=trigger_name_var, width=10, bg="#4a4a4a", fg="white").grid(row=2, column=1, padx=2, pady=2)
+
+        self.schema_var = tk.StringVar()
+        self.update_schema()  # Llamar a la función cuando se cargue el formulario
+
+        tk.Label(parent, text="Esquema:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=2, pady=2, sticky="e")
+        tk.Entry(parent, textvariable=self.schema_var, width=10, bg="#4a4a4a", fg="white").grid(row=1, column=1, padx=2, pady=2)
+
+
+        tk.Label(parent, text="Base Type:", bg="#2e2e2e", fg="white").grid(row=3, column=0, padx=2, pady=2, sticky="e")
+        base_type_var = tk.StringVar()
+        base_type_combobox = ttk.Combobox(parent, textvariable=base_type_var, values=["TABLE"], width=8, state="readonly")
+        base_type_combobox.grid(row=3, column=1, padx=2, pady=2)
+
+        tk.Label(parent, text="Objeto (Tabla):", bg="#2e2e2e", fg="white").grid(row=4, column=0, padx=2, pady=2, sticky="e")
+        base_object_var = tk.StringVar()
+        tk.Entry(parent, textvariable=base_object_var, width=10, bg="#4a4a4a", fg="white").grid(row=4, column=1, padx=2, pady=2)
+
+        tk.Label(parent, text="Timing:", bg="#2e2e2e", fg="white").grid(row=5, column=0, padx=2, pady=2, sticky="e")
+        timing_var = tk.StringVar()
+        timing_combobox = ttk.Combobox(parent, textvariable=timing_var, values=["BEFORE", "AFTER"], width=8, state="readonly")
+        timing_combobox.grid(row=5, column=1, padx=2, pady=2)
+
+        # Cambiando Listbox a Combobox para Eventos
+        tk.Label(parent, text="Eventos:", bg="#2e2e2e", fg="white").grid(row=6, column=0, padx=2, pady=2, sticky="e")
+        event_var = tk.StringVar()
+        available_events = ttk.Combobox(parent, textvariable=event_var, values=["INSERT", "UPDATE", "DELETE"], width=8, state="readonly")
+        available_events.grid(row=6, column=1, padx=2, pady=2)
+
+        tk.Label(parent, text="Referenciar Old:", bg="#2e2e2e", fg="white").grid(row=7, column=0, padx=2, pady=2, sticky="e")
+        referencing_old_var = tk.StringVar()
+        tk.Entry(parent, textvariable=referencing_old_var, width=10, bg="#4a4a4a", fg="white").grid(row=7, column=1, padx=2, pady=2)
+
+        tk.Label(parent, text="Referenciar New:", bg="#2e2e2e", fg="white").grid(row=8, column=0, padx=2, pady=2, sticky="e")
+        referencing_new_var = tk.StringVar()
+        tk.Entry(parent, textvariable=referencing_new_var, width=10, bg="#4a4a4a", fg="white").grid(row=8, column=1, padx=2, pady=2)
+
+        statement_level_var = tk.BooleanVar()
+        tk.Checkbutton(parent, text="Nivel Sentencia", variable=statement_level_var, bg="#2e2e2e", fg="white").grid(row=9, column=1, sticky="w", padx=2, pady=2)
+
+        tk.Label(parent, text="SQL Body:", bg="#2e2e2e", fg="white").grid(row=10, column=0, padx=2, pady=2, sticky="e")
+        sql_body_text = tk.Text(parent, height=3, width=25, bg="#4a4a4a", fg="white")
+        sql_body_text.grid(row=10, column=1, padx=2, pady=2)
+
+        def create_trigger():
+            trigger_name = trigger_name_var.get()
+            timing = timing_var.get()
+            base_object = base_object_var.get()
+            selected_event = event_var.get()
+            sql_body = sql_body_text.get("1.0", tk.END).strip()
+            old_ref = referencing_old_var.get()
+            new_ref = referencing_new_var.get()
+
+            if not trigger_name or not base_object or not timing or not selected_event:
+                messagebox.showerror("Error", "Por favor completa todos los campos.")
+                return
+
+            # Start forming the DDL statement
+            ddl = f"CREATE TRIGGER {trigger_name} {timing} {selected_event} ON {base_object}\n"
+
+            # Add REFERENCING clause based on event type
+            referencing_clause = []
+            if old_ref and selected_event in ["UPDATE", "DELETE"]:
+                referencing_clause.append(f"OLD AS {old_ref}")
+            if new_ref and selected_event in ["UPDATE", "INSERT"]:
+                referencing_clause.append(f"NEW AS {new_ref}")
+
+            if referencing_clause:
+                ddl += f"REFERENCING {' '.join(referencing_clause)}\n"
+
+            ddl += f"FOR EACH {'STATEMENT' if statement_level_var.get() else 'ROW'}\n"
+            ddl += f"{sql_body}"
+
+            # Print DDL to query_text and execute
+            self.query_text.delete(1.0, tk.END)
+            self.query_text.insert(tk.END, ddl)
+
+            # execute ddl
+            if not self.conn:
+                messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
+                return
+
+            cursor = self.conn.cursor()
+            try:
+                cursor.execute(ddl)
+                self.conn.commit()
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Trigger '{trigger_name}' creado exitosamente.")
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al crear el trigger: {str(e)}")
+
+            cursor.close()
+
+
+        tk.Button(parent, text="Crear Trigger", command=create_trigger, bg="#3e3e3e", fg="black").grid(row=11, column=1, padx=2, pady=2)
+
+
+    def create_view_form(self, parent):
+        tk.Label(parent, text="Crear Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+
+        tk.Label(parent, text="Nombre de la Vista:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        view_name_var = tk.StringVar()
+        tk.Entry(parent, textvariable=view_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5, sticky="we")
+
+        tk.Label(parent, text="SQL Query:", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        query_input = tk.Text(parent, height=10, bg="#2e2e2e", fg="white", insertbackground="white")
+        query_input.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="we")
+
+        def check_syntax():
+            query = query_input.get("1.0", tk.END).strip()
+            if not query.lower().startswith("select"):
+                messagebox.showerror("Error", "La consulta debe comenzar con una instrucción SELECT.")
+                return
+            messagebox.showinfo("Sintaxis", "La sintaxis parece correcta.")
+
+        def create_view():
+            view_name = view_name_var.get()
+            query = query_input.get("1.0", tk.END).strip()
+
+            if not view_name or not query:
+                messagebox.showerror("Error", "Debe proporcionar el nombre de la vista y la consulta SQL.")
+                return
+
+            ddl = f"CREATE VIEW {view_name} AS {query}"
+            self.query_text.delete(1.0, tk.END)
+            self.query_text.insert(tk.END, ddl)
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(ddl)
+                self.conn.commit()
+                cursor.close()
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Vista '{view_name}' creada exitosamente.")
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al crear la vista: {str(e)}")
+
+        tk.Button(parent, text="Check Syntax", command=check_syntax, bg="#3e3e3e", fg="black").grid(row=4, column=0, padx=5, pady=10, sticky="e")
+
+        tk.Button(parent, text="Crear Vista", command=create_view, bg="#3e3e3e", fg="black").grid(row=4, column=1, padx=5, pady=10, sticky="w")
+
 
     def create_check_form(self, parent):
         tk.Label(parent, text="Crear Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
-
-    def create_view_form(self, parent):
-        tk.Label(parent, text="Crear Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
     def create_schema_form(self, parent):
         tk.Label(parent, text="Crear Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
@@ -373,15 +531,182 @@ class SQLDeveloperEmulator:
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al cargar las tablas: {str(e)}")
 
-
     def modify_trigger_form(self, parent):
-        tk.Label(parent, text="Modificar Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+            tk.Label(parent, text="Modificar Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+            # Label y ComboBox para seleccionar el trigger
+            tk.Label(parent, text="Nombre del Trigger:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
+            trigger_name_var = tk.StringVar()
+            trigger_combobox = ttk.Combobox(parent, textvariable=trigger_name_var, state="readonly")
+            trigger_combobox.grid(row=1, column=1, padx=5, pady=5)
+
+            # Botón para cargar los triggers
+            tk.Button(parent, text="Cargar Triggers", command=lambda: self.load_triggers(trigger_combobox), bg="#3e3e3e", fg="black").grid(row=1, column=2, padx=5, pady=5)
+
+            # Textbox para mostrar el DDL del trigger
+            tk.Label(parent, text="Definición del Trigger (DDL):", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+            ddl_text = tk.Text(parent, height=10, bg="#2e2e2e", fg="white", insertbackground="white")
+            ddl_text.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="we")
+
+        # Función para cargar el DDL del trigger seleccionado
+            def load_trigger_ddl():
+                trigger_name = trigger_name_var.get()
+                if not trigger_name:
+                    messagebox.showerror("Error", "Debe seleccionar un trigger.")
+                    return
+
+                try:
+                    cursor = self.conn.cursor()
+                    query = f"SELECT TRIGGERDEFINITION FROM SYS.SYSTRIGGERS WHERE TRIGGERNAME = '{trigger_name}'"
+                    cursor.execute(query)
+                    ddl = cursor.fetchone()[0]
+
+                    # Mostrar el DDL en el textbox
+                    ddl_text.delete(1.0, tk.END)
+                    ddl_text.insert(tk.END, ddl)
+                    cursor.close()
+
+                except Exception as e:
+                    ddl_text.delete(1.0, tk.END)
+                    ddl_text.insert(tk.END, f"Error al cargar el DDL del trigger: {str(e)}")
+
+            # Botón para cargar el DDL del trigger seleccionado
+            tk.Button(parent, text="Cargar DDL", command=load_trigger_ddl, bg="#3e3e3e", fg="black").grid(row=4, column=1, padx=5, pady=10, sticky="e")
+
+            def modify_trigger():
+                ddl = ddl_text.get("1.0", tk.END).strip()
+                if not ddl:
+                    messagebox.showerror("Error", "Debe ingresar el DDL del trigger.")
+                    return
+
+                try:
+                    cursor = self.conn.cursor()
+
+                    # Ejecutar el DDL modificado
+                    cursor.execute(ddl)
+                    self.conn.commit()
+
+                    self.resultado_text.delete(1.0, tk.END)
+                    self.resultado_text.insert(tk.END, f"Trigger '{trigger_name_var.get()}' modificado exitosamente.")
+
+                    cursor.close()
+
+                except Exception as e:
+                    self.resultado_text.delete(1.0, tk.END)
+                    self.resultado_text.insert(tk.END, f"Error al modificar el trigger: {str(e)}")
+
+            tk.Button(parent, text="Modificar Trigger", command=modify_trigger, bg="#3e3e3e", fg="black").grid(row=5, column=1, padx=5, pady=10, sticky="e")
+
+
+
+    def load_triggers(self, combobox):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT TRIGGERNAME FROM SYS.SYSTRIGGERS")
+            triggers = [row[0] for row in cursor.fetchall()]
+            cursor.close()
+
+            # Cargar los triggers en el ComboBox
+            combobox["values"] = triggers
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar los triggers: {str(e)}")
+
 
     def modify_check_form(self, parent):
         tk.Label(parent, text="Modificar Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
     def modify_view_form(self, parent):
         tk.Label(parent, text="Modificar Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        # Create the Combobox for selecting a view, initially empty
+        view_name_var = tk.StringVar()
+        view_combobox = ttk.Combobox(parent, textvariable=view_name_var, state="readonly")
+        view_combobox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+
+        # Button to load the views into the Combobox
+        def load_views():
+            views = self.get_views()
+            if views:
+                view_combobox["values"] = views
+            else:
+                view_combobox["values"] = []
+
+        tk.Button(parent, text="Cargar Vistas", command=load_views, bg="#3e3e3e", fg="black").grid(row=1, column=1, padx=5, pady=5)
+
+        # Label and Textbox for showing the view's SQL query
+        tk.Label(parent, text="Consulta SQL de la Vista:", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        query_text = tk.Text(parent, height=5, bg="#2e2e2e", fg="white", insertbackground="white")
+        query_text.grid(row=2, column=1, padx=5, pady=5, sticky="we")
+
+
+        def load_view_ddl():
+            view_name = view_name_var.get()
+            if not view_name:
+                messagebox.showerror("Error", "Debe seleccionar una vista.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(f"SELECT VIEWDEFINITION FROM SYS.SYSVIEWS WHERE VIEWNAME = '{view_name}'")
+                result = cursor.fetchone()
+
+                if result:
+                    query_text.delete(1.0, tk.END)
+                    query_text.insert(tk.END, result[0])
+                else:
+                    messagebox.showerror("Error", "No se pudo cargar el DDL de la vista.")
+                cursor.close()
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al cargar el DDL: {str(e)}")
+
+
+        def modify_view():
+            view_name = view_name_var.get()
+            modified_query = query_text.get("1.0", tk.END).strip()
+
+            if not view_name or not modified_query:
+                messagebox.showerror("Error", "Debe completar los campos de nombre y consulta SQL.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(f"DROP VIEW {view_name}")
+                cursor.execute(modified_query)
+                self.conn.commit()
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Vista '{view_name}' modificada exitosamente.")
+                cursor.close()
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al modificar la vista: {str(e)}")
+
+        # Button to load the view DDL
+        tk.Button(parent, text="Cargar DDL", command=load_view_ddl, bg="#3e3e3e", fg="black").grid(row=3, column=1, padx=5, pady=5, sticky="w")
+
+        # Button to modify the view
+        tk.Button(parent, text="Modificar Vista", command=modify_view, bg="#3e3e3e", fg="black").grid(row=4, column=1, padx=5, pady=10, sticky="w")
+
+    def get_views(self):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT TABLENAME FROM SYS.SYSTABLES WHERE TABLETYPE='V'")
+            views = [row[0] for row in cursor.fetchall()]
+            cursor.close()
+            return views
+        except Exception as e:
+            if hasattr(self, 'resultado_text'):
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al obtener las vistas: {str(e)}")
+            else:
+                messagebox.showerror("Error", f"Error al obtener las vistas: {str(e)}")
+            return []
+
+
 
     def modify_schema_form(self, parent):
         tk.Label(parent, text="Modificar Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
@@ -449,11 +774,102 @@ class SQLDeveloperEmulator:
     def delete_trigger_form(self, parent):
         tk.Label(parent, text="Borrar Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
+        # Label y ComboBox para seleccionar el trigger a borrar
+        tk.Label(parent, text="Nombre del Trigger:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
+        trigger_name_var = tk.StringVar()
+        trigger_combobox = ttk.Combobox(parent, textvariable=trigger_name_var, state="readonly")
+        trigger_combobox.grid(row=1, column=1, padx=5, pady=5)
+
+        # Botón para cargar los triggers disponibles
+        tk.Button(parent, text="Cargar Triggers", command=lambda: self.load_triggers(trigger_combobox), bg="#3e3e3e", fg="black").grid(row=1, column=2, padx=5, pady=5)
+
+        # Función para eliminar el trigger seleccionado
+        def delete_trigger():
+            trigger_name = trigger_name_var.get()
+            if not trigger_name:
+                messagebox.showerror("Error", "Debe seleccionar un trigger.")
+                return
+
+            confirm = messagebox.askyesno("Confirmar", f"¿Está seguro de que desea eliminar el trigger '{trigger_name}'?")
+            if not confirm:
+                return
+
+            try:
+                cursor = self.conn.cursor()
+                query = f"DROP TRIGGER {trigger_name}"
+                cursor.execute(query)
+                self.conn.commit()
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Trigger '{trigger_name}' eliminado exitosamente.")
+
+                self.load_triggers(trigger_combobox)
+
+                cursor.close()
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al eliminar el trigger: {str(e)}")
+
+
+        tk.Button(parent, text="Borrar Trigger", command=delete_trigger, bg="#3e3e3e", fg="black").grid(row=2, column=1, padx=5, pady=10, sticky="e")
+
+
     def delete_check_form(self, parent):
         tk.Label(parent, text="Borrar Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
     def delete_view_form(self, parent):
         tk.Label(parent, text="Borrar Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        tk.Label(parent, text="Seleccionar Vista:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+
+
+        view_name_var = tk.StringVar()
+
+        view_combobox = ttk.Combobox(parent, textvariable=view_name_var, values=[], state="readonly")
+        view_combobox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+
+        tk.Button(parent, text="Cargar Vistas", command=lambda: self.load_views(view_combobox), bg="#3e3e3e", fg="black").grid(row=1, column=2, padx=5, pady=5, sticky="w")
+
+        def delete_view():
+            view_name = view_name_var.get()
+            if not view_name:
+                messagebox.showerror("Error", "Debe seleccionar una vista para eliminar.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(f"DROP VIEW {view_name}")
+                self.conn.commit()
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Vista '{view_name}' eliminada exitosamente.")
+                cursor.close()
+
+                self.load_views(view_combobox)
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al borrar la vista: {str(e)}")
+
+        tk.Button(parent, text="Borrar Vista", command=delete_view, bg="#3e3e3e", fg="black").grid(row=2, column=1, padx=5, pady=10, sticky="w")
+
+    def load_views(self, combobox):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT TABLENAME FROM SYS.SYSTABLES WHERE TABLETYPE = 'V'")
+            views = [row[0] for row in cursor.fetchall()]
+            cursor.close()
+
+            # Cargar las vistas en el ComboBox
+            combobox["values"] = views
+
+        except Exception as e:
+            if hasattr(self, 'resultado_text'):
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al cargar las vistas: {str(e)}")
+            else:
+                messagebox.showerror("Error", f"Error al cargar las vistas: {str(e)}")
+
 
     def delete_schema_form(self, parent):
         tk.Label(parent, text="Borrar Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
@@ -646,6 +1062,7 @@ class SQLDeveloperEmulator:
         if self.selected_connection:
             connection_info = self.connections.get(self.selected_connection, {})
             self.connect_to_database(connection_info)
+            print(f"Conectado a {self.selected_connection}")
 
     def connect_to_database(self, connection_info):
         try:
@@ -655,6 +1072,7 @@ class SQLDeveloperEmulator:
             self.conn = jaydebeapi.connect(driver_class, db_url, [connection_info.get("schema"), connection_info.get("password")], jdbc_driver)
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Conexión con {self.selected_connection} realizada exitosamente.")
+            self.update_schema()
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al conectar con {self.selected_connection}: {str(e)}")
