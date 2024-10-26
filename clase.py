@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, simpledialog
 import jaydebeapi
 import pickle
 import atexit
@@ -43,6 +43,9 @@ class SQLDeveloperEmulator:
 
         self.conectarBtn = tk.Button(frame_izquierdo, text="Conectar", bg="#3e3e3e", fg="black", command=self.connect_to_selected_connection, state="disabled")
         self.conectarBtn.pack(pady=2)
+
+        self.desconectarBtn = tk.Button(frame_izquierdo, text="Desconectar", bg="#3e3e3e", fg="black", command=self.disconnect_from_connection, state="disabled")
+        self.desconectarBtn.pack(pady=2)
 
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -166,10 +169,11 @@ class SQLDeveloperEmulator:
 
                 cursor = self.conn.cursor()
 
+                # Ejecutar el query
                 cursor.execute(query)
 
-                # Si es una consulta SELECT, mostrar los resultados
-                if query.lower().startswith("select"):
+                # Verificar si la consulta devuelve resultados (SELECT, VALUES, etc.)
+                try:
                     results = cursor.fetchall()
                     result_text = ""
 
@@ -178,17 +182,18 @@ class SQLDeveloperEmulator:
 
                     self.resultado_text.delete(1.0, tk.END)
                     self.resultado_text.insert(tk.END, result_text if result_text else "No hay resultados para mostrar.")
-                else:
-                    # Para otros tipos de consultas como INSERT, UPDATE, DELETE
+                except:
+                    # Si no devuelve resultados, entonces es otro tipo de consulta (INSERT, UPDATE, DELETE)
                     self.conn.commit()
                     self.resultado_text.delete(1.0, tk.END)
-                    self.resultado_text.insert(tk.END, "Consulta ejecutada con éxito.")
+                    self.resultado_text.insert(tk.END, "Consulta ejecutada correctamente. Filas afectadas: {}".format(cursor.rowcount))
 
                 cursor.close()
 
             except Exception as e:
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Error al ejecutar el query: {str(e)}")
+
 
         tk.Button(parent, text="Ejecutar", command=execute_query, bg="#3e3e3e", fg="black").grid(row=2, column=0, padx=5, pady=10, sticky="e")
 
@@ -294,10 +299,9 @@ class SQLDeveloperEmulator:
         tk.Entry(parent, textvariable=trigger_name_var, width=10, bg="#4a4a4a", fg="white").grid(row=2, column=1, padx=2, pady=2)
 
         self.schema_var = tk.StringVar()
-        self.update_schema()  # Llamar a la función cuando se cargue el formulario
 
         tk.Label(parent, text="Esquema:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=2, pady=2, sticky="e")
-        tk.Entry(parent, textvariable=self.schema_var, width=10, bg="#4a4a4a", fg="white").grid(row=1, column=1, padx=2, pady=2)
+        tk.Entry(parent, textvariable=self.schema_var, width=10, bg="#4a4a4a", fg="white",  state="readonly").grid(row=1, column=1, padx=2, pady=2)
 
 
         tk.Label(parent, text="Base Type:", bg="#2e2e2e", fg="white").grid(row=3, column=0, padx=2, pady=2, sticky="e")
@@ -311,7 +315,7 @@ class SQLDeveloperEmulator:
 
         tk.Label(parent, text="Timing:", bg="#2e2e2e", fg="white").grid(row=5, column=0, padx=2, pady=2, sticky="e")
         timing_var = tk.StringVar()
-        timing_combobox = ttk.Combobox(parent, textvariable=timing_var, values=["BEFORE", "AFTER"], width=8, state="readonly")
+        timing_combobox = ttk.Combobox(parent, textvariable=timing_var, values=["AFTER"], width=8, state="readonly")
         timing_combobox.grid(row=5, column=1, padx=2, pady=2)
 
         # Cambiando Listbox a Combobox para Eventos
@@ -438,10 +442,136 @@ class SQLDeveloperEmulator:
 
 
     def create_check_form(self, parent):
-        tk.Label(parent, text="Crear Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+        tk.Label(parent, text="Crear CHECK Constraint", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        # Label and button to load tables
+        tk.Label(parent, text="Seleccionar Tabla:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        table_name_var = tk.StringVar()
+        table_combobox = ttk.Combobox(parent, textvariable=table_name_var, state="readonly")
+        table_combobox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+
+        # Botón para cargar las tablas
+        def load_tables():
+            tables = self.get_tables()
+            if tables:
+                table_combobox['values'] = tables
+
+        tk.Button(parent, text="Cargar Tablas", command=load_tables, bg="#3e3e3e", fg="black").grid(row=1, column=2, padx=5, pady=5)
+
+        # Column name
+        tk.Label(parent, text="Nombre de la Columna:", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        column_name_var = tk.StringVar()
+        column_name_entry = tk.Entry(parent, textvariable=column_name_var, bg="#2e2e2e", fg="white")
+        column_name_entry.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+
+        # Constraint name
+        tk.Label(parent, text="Nombre de la Restricción:", bg="#2e2e2e", fg="white").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        constraint_name_var = tk.StringVar()
+        constraint_name_entry = tk.Entry(parent, textvariable=constraint_name_var, bg="#2e2e2e", fg="white")
+        constraint_name_entry.grid(row=3, column=1, padx=5, pady=5, sticky="w")
+
+        # Check condition
+        tk.Label(parent, text="Condición del CHECK:", bg="#2e2e2e", fg="white").grid(row=4, column=0, padx=5, pady=5, sticky="e")
+        check_condition_var = tk.StringVar()
+        tk.Entry(parent, textvariable=check_condition_var, bg="#2e2e2e", fg="white").grid(row=4, column=1, padx=5, pady=5, sticky="w")
+
+        # Function to create the CHECK constraint
+        def create_check():
+            table_name = table_name_var.get()
+            column_name = column_name_var.get()
+            constraint_name = constraint_name_var.get()
+            check_condition = check_condition_var.get()
+
+            if not table_name or not column_name or not constraint_name or not check_condition:
+                messagebox.showerror("Error", "Todos los campos son obligatorios.")
+                return
+
+            ddl = f"""
+            ALTER TABLE {table_name}
+            ADD CONSTRAINT {constraint_name} CHECK ({check_condition})
+            """
+            self.query_text.delete(1.0, tk.END)
+            self.query_text.insert(tk.END, ddl)
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(ddl)
+                self.conn.commit()
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"CHECK Constraint '{constraint_name}' añadida exitosamente.")
+                cursor.close()
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al añadir la CHECK Constraint: {str(e)}")
+
+        # Add button to create the CHECK constraint
+        tk.Button(parent, text="Crear CHECK", command=create_check, bg="#3e3e3e", fg="black").grid(row=5, column=1, padx=5, pady=10, sticky="e")
+
+
+    def get_tables(self):
+        if not self.conn:
+            messagebox.showerror("Error", "Debe seleccionar una conexión para cargar las tablas.")
+            return []
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT TABLENAME FROM SYS.SYSTABLES WHERE TABLETYPE='T'")
+            tables = [row[0] for row in cursor.fetchall()]
+            cursor.close()
+            return tables
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al cargar las tablas: {str(e)}")
+            return []
 
     def create_schema_form(self, parent):
+        # Título del formulario
         tk.Label(parent, text="Crear Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        # Campo para el nombre del esquema
+        tk.Label(parent, text="Nombre del Esquema:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        schema_name_var = tk.StringVar()
+        tk.Entry(parent, textvariable=schema_name_var, bg="#4a4a4a", fg="white").grid(row=1, column=1, padx=5, pady=5)
+
+        # Campo para autorizar a un usuario
+        tk.Label(parent, text="Usuario Autorizado (Opcional):", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        user_name_var = tk.StringVar()
+        tk.Entry(parent, textvariable=user_name_var, bg="#4a4a4a", fg="white").grid(row=2, column=1, padx=5, pady=5)
+
+        # Función para crear el esquema
+        def create_schema():
+            schema_name = schema_name_var.get()
+            user_name = user_name_var.get()
+
+            if not schema_name:
+                messagebox.showerror("Error", "El nombre del esquema es obligatorio.")
+                return
+
+            # Crear la sentencia SQL dependiendo de si se especifica o no un usuario
+            if user_name:
+                query = f"CREATE SCHEMA {schema_name} AUTHORIZATION {user_name}"
+            else:
+                query = f"CREATE SCHEMA {schema_name}"
+
+            if not self.conn:
+                messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
+                return
+
+            # Ejecutar la consulta
+            try:
+                cursor = self.conn.cursor()
+                self.query_text.delete(1.0, tk.END)
+                self.query_text.insert(tk.END, query)
+                cursor.execute(query)
+                self.conn.commit()
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Esquema '{schema_name}' creado exitosamente.")
+                cursor.close()
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al crear el esquema: {str(e)}")
+
+        # Botón para crear el esquema
+        tk.Button(parent, text="Crear Esquema", bg="#3e3e3e", fg="black", command=create_schema).grid(row=3, column=0, columnspan=2, pady=10)
 
 #=======================================================================================================================
 #MODIFY-FORMS
@@ -614,7 +744,90 @@ class SQLDeveloperEmulator:
 
 
     def modify_check_form(self, parent):
-        tk.Label(parent, text="Modificar Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+        tk.Label(parent, text="Modificar CHECK Constraint", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        # Seleccionar tabla
+        tk.Label(parent, text="Seleccionar Tabla:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        table_name_var = tk.StringVar()
+        table_combobox = ttk.Combobox(parent, textvariable=table_name_var, values=[], state="readonly")
+        table_combobox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+
+        # Botón para cargar tablas
+        tk.Button(parent, text="Cargar Tablas", command=lambda: self.load_tables(table_combobox), bg="#3e3e3e", fg="black").grid(row=1, column=2, padx=5, pady=5)
+
+        # Seleccionar CHECK constraint
+        tk.Label(parent, text="Seleccionar CHECK Constraint:", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        check_name_var = tk.StringVar()
+        check_combobox = ttk.Combobox(parent, textvariable=check_name_var, values=[], state="readonly")
+        check_combobox.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+
+        tk.Button(parent, text="Cargar CHECKs", command=lambda: load_checks(table_name_var.get(), check_combobox), bg="#3e3e3e", fg="black").grid(row=2, column=2, padx=5, pady=5)
+
+        # Cambiar nombre del CHECK
+        tk.Label(parent, text="Nuevo Nombre del CHECK:", bg="#2e2e2e", fg="white").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        new_check_name_var = tk.StringVar()
+        tk.Entry(parent, textvariable=new_check_name_var, bg="#2e2e2e", fg="white").grid(row=3, column=1, padx=5, pady=5, sticky="w")
+
+        # Modificar la condición del CHECK
+        tk.Label(parent, text="Nueva Condición del CHECK:", bg="#2e2e2e", fg="white").grid(row=4, column=0, padx=5, pady=5, sticky="e")
+        new_check_condition_var = tk.StringVar()
+        tk.Entry(parent, textvariable=new_check_condition_var, bg="#2e2e2e", fg="white").grid(row=4, column=1, padx=5, pady=5, sticky="w")
+
+        def load_checks(table_name, check_combobox):
+            if not table_name:
+                messagebox.showerror("Error", "Debe seleccionar una tabla primero.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+
+                query = f"""
+                SELECT c.CONSTRAINTNAME
+                FROM SYS.SYSCONSTRAINTS c
+                JOIN SYS.SYSCHECKS ch ON c.CONSTRAINTID = ch.CONSTRAINTID
+                WHERE c.TABLEID IN (SELECT t.TABLEID FROM SYS.SYSTABLES t WHERE t.TABLENAME='{table_name}')
+                """
+
+                cursor.execute(query)
+                checks = [row[0] for row in cursor.fetchall()]
+                check_combobox['values'] = checks
+                cursor.close()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al cargar los CHECKs: {str(e)}")
+
+        def modify_check():
+            table_name = table_name_var.get()
+            check_name = check_name_var.get()
+            new_check_name = new_check_name_var.get()
+            new_condition = new_check_condition_var.get()
+
+            if not table_name or not check_name or not new_check_name or not new_condition:
+                messagebox.showerror("Error", "Debe completar todos los campos.")
+                return
+
+            # Drop the old CHECK and add the new one
+            ddl_drop = f"ALTER TABLE {table_name} DROP CONSTRAINT {check_name}"
+            ddl_add = f"ALTER TABLE {table_name} ADD CONSTRAINT {new_check_name} CHECK ({new_condition})"
+
+            self.query_text.delete(1.0, tk.END)
+            self.query_text.insert(tk.END, f"{ddl_drop};\n{ddl_add};")
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(ddl_drop)
+                cursor.execute(ddl_add)
+                self.conn.commit()
+                cursor.close()
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"CHECK Constraint '{new_check_name}' modificada exitosamente.")
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al modificar la CHECK Constraint: {str(e)}")
+
+        tk.Button(parent, text="Modificar CHECK", command=modify_check, bg="#3e3e3e", fg="black").grid(row=5, column=1, padx=5, pady=10, sticky="e")
+
 
     def modify_view_form(self, parent):
         tk.Label(parent, text="Modificar Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
@@ -709,7 +922,80 @@ class SQLDeveloperEmulator:
 
 
     def modify_schema_form(self, parent):
-        tk.Label(parent, text="Modificar Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+            # Título del formulario
+        tk.Label(parent, text="Modificar Permisos", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        # ComboBox para seleccionar el esquema
+        tk.Label(parent, text="Seleccionar Esquema:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
+        schema_name_var = tk.StringVar()
+        schema_combobox = ttk.Combobox(parent, textvariable=schema_name_var, state="readonly", width=30)
+        schema_combobox.grid(row=1, column=1, padx=5, pady=5)
+
+        # Botón para cargar los esquemas en el ComboBox
+        tk.Button(parent, text="Cargar Esquemas", bg="#3e3e3e", fg="black", command=lambda: self.populate_schemas_combobox(schema_combobox)).grid(row=2, column=0, columnspan=2, pady=10)
+
+        # Campo para ingresar el nombre del usuario
+        tk.Label(parent, text="Usuario:", bg="#2e2e2e", fg="white").grid(row=3, column=0, padx=5, pady=5)
+        user_name_var = tk.StringVar()
+        tk.Entry(parent, textvariable=user_name_var, bg="#4a4a4a", fg="white").grid(row=3, column=1, padx=5, pady=5)
+
+        # Lista de permisos a otorgar o revocar
+        tk.Label(parent, text="Seleccionar Permisos:", bg="#2e2e2e", fg="white").grid(row=4, column=0, padx=5, pady=5)
+        permissions_var = tk.StringVar()
+        permissions_combobox = ttk.Combobox(parent, textvariable=permissions_var, state="readonly", width=30, values=["SELECT", "INSERT", "UPDATE", "DELETE"])
+        permissions_combobox.grid(row=4, column=1, padx=5, pady=5)
+
+        # Seleccionar acción: GRANT o REVOKE
+        tk.Label(parent, text="Acción:", bg="#2e2e2e", fg="white").grid(row=5, column=0, padx=5, pady=5)
+        action_var = tk.StringVar()
+        action_combobox = ttk.Combobox(parent, textvariable=action_var, state="readonly", width=30, values=["GRANT", "REVOKE"])
+        action_combobox.grid(row=5, column=1, padx=5, pady=5)
+
+        tk.Label(parent, text="Tabla:", bg="#2e2e2e", fg="white").grid(row=6, column=0, padx=5, pady=5)
+        table_name_var = tk.StringVar()
+        tk.Entry(parent, textvariable=table_name_var, bg="#4a4a4a", fg="white").grid(row=6, column=1, padx=5, pady=5)
+
+        # Función para otorgar o revocar permisos
+        def modify_permissions():
+            schema_name = schema_name_var.get()
+            user_name = user_name_var.get()
+            permission = permissions_var.get()
+            action = action_var.get()
+            table_name = table_name_var.get()
+
+            if not schema_name or not user_name or not permission or not action or not table_name:
+                messagebox.showerror("Error", "Debe completar todos los campos obligatorios.")
+                return
+
+            if table_name:
+                if action == "GRANT":
+                    query = f'GRANT {permission} ON {table_name} TO "{user_name.upper()}"'
+                elif action == "REVOKE":
+                    query = f'GRANT {permission} ON {table_name} TO "{user_name.upper()}"'
+
+            if not self.conn:
+                messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
+                return
+
+            # Ejecutar la consulta
+            try:
+                cursor = self.conn.cursor()
+                self.query_text.delete(1.0, tk.END)
+                self.query_text.insert(tk.END, query)
+                cursor.execute(query)
+                self.conn.commit()
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Permiso '{permission}' {action.lower()}ado exitosamente para el usuario '{user_name}'.")
+                cursor.close()
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al {action.lower()} permisos: {str(e)}")
+
+        # Botón para aplicar los cambios de permisos
+        tk.Button(parent, text="Aplicar Permisos", bg="#3e3e3e", fg="black", command=modify_permissions).grid(row=7, column=0, columnspan=2, pady=10)
+
+
 
 #=======================================================================================================================
 #DELETE-FORMS
@@ -816,7 +1102,75 @@ class SQLDeveloperEmulator:
 
 
     def delete_check_form(self, parent):
-        tk.Label(parent, text="Borrar Check", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+        tk.Label(parent, text="Borrar CHECK Constraint", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        # Seleccionar tabla
+        tk.Label(parent, text="Seleccionar Tabla:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        table_name_var = tk.StringVar()
+        table_combobox = ttk.Combobox(parent, textvariable=table_name_var, values=[], state="readonly")
+        table_combobox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+
+        # Botón para cargar tablas
+        tk.Button(parent, text="Cargar Tablas", command=lambda: self.load_tables(table_combobox), bg="#3e3e3e", fg="black").grid(row=1, column=2, padx=5, pady=5)
+
+        # Seleccionar CHECK constraint
+        tk.Label(parent, text="Seleccionar CHECK Constraint:", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        check_name_var = tk.StringVar()
+        check_combobox = ttk.Combobox(parent, textvariable=check_name_var, values=[], state="readonly")
+        check_combobox.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+
+        tk.Button(parent, text="Cargar CHECKs", command=lambda: load_checks(table_name_var.get(), check_combobox), bg="#3e3e3e", fg="black").grid(row=2, column=2, padx=5, pady=5)
+
+        def load_checks(table_name, check_combobox):
+            if not table_name:
+                messagebox.showerror("Error", "Debe seleccionar una tabla primero.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+
+                query = f"""
+                SELECT c.CONSTRAINTNAME
+                FROM SYS.SYSCONSTRAINTS c
+                JOIN SYS.SYSCHECKS ch ON c.CONSTRAINTID = ch.CONSTRAINTID
+                WHERE c.TABLEID IN (SELECT t.TABLEID FROM SYS.SYSTABLES t WHERE t.TABLENAME='{table_name}')
+                """
+
+                cursor.execute(query)
+                checks = [row[0] for row in cursor.fetchall()]
+                check_combobox['values'] = checks
+                cursor.close()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al cargar los CHECKs: {str(e)}")
+
+        def delete_check():
+            table_name = table_name_var.get()
+            check_name = check_name_var.get()
+
+            if not table_name or not check_name:
+                messagebox.showerror("Error", "Debe seleccionar una tabla y un CHECK constraint.")
+                return
+
+            ddl_drop = f"ALTER TABLE {table_name} DROP CONSTRAINT {check_name}"
+
+            self.query_text.delete(1.0, tk.END)
+            self.query_text.insert(tk.END, ddl_drop)
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(ddl_drop)
+                self.conn.commit()
+                cursor.close()
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"CHECK Constraint '{check_name}' eliminada exitosamente.")
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al eliminar la CHECK Constraint: {str(e)}")
+
+        tk.Button(parent, text="Borrar CHECK", command=delete_check, bg="#3e3e3e", fg="black").grid(row=3, column=1, padx=5, pady=10, sticky="e")
+
 
     def delete_view_form(self, parent):
         tk.Label(parent, text="Borrar Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
@@ -859,8 +1213,6 @@ class SQLDeveloperEmulator:
             cursor.execute("SELECT TABLENAME FROM SYS.SYSTABLES WHERE TABLETYPE = 'V'")
             views = [row[0] for row in cursor.fetchall()]
             cursor.close()
-
-            # Cargar las vistas en el ComboBox
             combobox["values"] = views
 
         except Exception as e:
@@ -874,23 +1226,76 @@ class SQLDeveloperEmulator:
     def delete_schema_form(self, parent):
         tk.Label(parent, text="Borrar Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
+        tk.Label(parent, text="Seleccionar Esquema:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
+        schema_name_var = tk.StringVar()
+        schema_combobox = ttk.Combobox(parent, textvariable=schema_name_var, state="readonly", width=30)
+        schema_combobox.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(parent, text="Cargar Esquemas", bg="#3e3e3e", fg="black", command=lambda: self.populate_schemas_combobox(schema_combobox)).grid(row=2, column=0, columnspan=2, pady=10)
+
+        # Función para borrar el esquema seleccionado
+        def delete_schema():
+            schema_name = schema_name_var.get()
+
+            if not schema_name:
+                messagebox.showerror("Error", "Debe seleccionar un esquema para borrar.")
+                return
+
+            # Crear la consulta SQL para borrar el esquema
+            query = f"DROP SCHEMA {schema_name} RESTRICT"
+
+            if not self.conn:
+                messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
+                return
+
+            # Ejecutar la consulta
+            try:
+                cursor = self.conn.cursor()
+                self.query_text.delete(1.0, tk.END)
+                self.query_text.insert(tk.END, query)
+                cursor.execute(query)
+                self.conn.commit()
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Esquema '{schema_name}' borrado exitosamente.")
+                cursor.close()
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al borrar el esquema: {str(e)}")
+
+        # Botón para borrar el esquema
+        tk.Button(parent, text="Borrar Esquema", bg="#3e3e3e", fg="black", command=delete_schema).grid(row=3, column=0, columnspan=2, pady=10)
+
+
 #=======================================================================================================================
 #DATABASE-OPERATIONS
     def get_schemas(self, connection_info):
         try:
             jdbc_driver = '/Users/coleexz/Documents/GitHub/ApacheDerbyDBMS/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
             driver_class = 'org.apache.derby.client.ClientAutoloadedDriver'
-            db_url = f'jdbc:derby://{connection_info["hostname"]}:{connection_info["port"]}/{connection_info["sid"]};create=true;currentSchema={connection_info.get("schema")}'
-            conn = jaydebeapi.connect(driver_class, db_url, [connection_info["schema"], connection_info["password"]], jdbc_driver)
+
+            db_url = f'jdbc:derby://{connection_info["hostname"]}:{connection_info["port"]}/{connection_info["sid"]};create=true'
+
+            username = connection_info.get("username")
+            password = connection_info.get("password")
+
+            conn = jaydebeapi.connect(driver_class, db_url, [username, password], jdbc_driver)
+
+            # Obtener los esquemas
             cursor = conn.cursor()
             cursor.execute("SELECT SCHEMANAME FROM SYS.SYSSCHEMAS")
             schemas = [row[0] for row in cursor.fetchall()]
+
             cursor.close()
             conn.close()
+
             return schemas
         except Exception as e:
-            messagebox.showerror("Error", f"Error al obtener los esquemas: {str(e)}")
+            messagebox.showerror("Error", "La conexion no tiene una contraseña")
+            self.set_password_connection(self.selected_connection)
+
             return []
+
 
     def select_connection(self, event):
         try:
@@ -915,7 +1320,7 @@ class SQLDeveloperEmulator:
             jdbc_driver = '/Users/coleexz/Documents/GitHub/ApacheDerbyDBMS/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
             driver_class = 'org.apache.derby.client.ClientAutoloadedDriver'
             db_url = f'jdbc:derby://{connection_info["hostname"]}:{connection_info["port"]}/{connection_info["sid"]};create=true;currentSchema={connection_info.get("schema")}'
-            conn = jaydebeapi.connect(driver_class, db_url, [connection_info["schema"], connection_info["password"]], jdbc_driver)
+            conn = jaydebeapi.connect(driver_class, db_url, [connection_info["username"], connection_info["password"]], jdbc_driver)
             cursor = conn.cursor()
             cursor.execute("SELECT SCHEMANAME FROM SYS.SYSSCHEMAS")
             schemas = [row[0] for row in cursor.fetchall()]
@@ -935,7 +1340,7 @@ class SQLDeveloperEmulator:
             jdbc_driver = '/Users/coleexz/Documents/GitHub/ApacheDerbyDBMS/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
             driver_class = 'org.apache.derby.client.ClientAutoloadedDriver'
             db_url = f'jdbc:derby://{connection_info["hostname"]}:{connection_info["port"]}/{connection_info["sid"]};create=true;currentSchema={connection_info.get("schema")}'
-            conn = jaydebeapi.connect(driver_class, db_url, [connection_info["schema"], connection_info["password"]], jdbc_driver)
+            conn = jaydebeapi.connect(driver_class, db_url, [connection_info["username"], connection_info["password"]], jdbc_driver)
             cursor = conn.cursor()
             cursor.execute("SELECT SCHEMANAME FROM SYS.SYSSCHEMAS")
             schemas = [row[0] for row in cursor.fetchall()]
@@ -950,21 +1355,27 @@ class SQLDeveloperEmulator:
     def insert_connections_to_file(self):
         try:
             with open('connections.pkl', 'wb') as file:
-                pickle.dump(self.connections, file)
+                connections = {name: {k: v for k, v in data.items() if k != 'password'} for name, data in self.connections.items()}
+                pickle.dump(connections, file)
             messagebox.showinfo("Guardar Conexiones", "Conexiones guardadas correctamente.")
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al guardar las conexiones: {str(e)}")
+
 
     def load_connections_from_file(self):
         try:
             with open('connections.pkl', 'rb') as file:
                 self.connections = pickle.load(file)
+
+            print("Conexiones cargadas:", self.connections)
+
             self.update_connections()
             messagebox.showinfo("Cargar Conexiones", "Conexiones cargadas correctamente.")
         except FileNotFoundError:
             messagebox.showwarning("Advertencia", "No se encontró el archivo de conexiones.")
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al cargar las conexiones: {str(e)}")
+
 
     def show_new_connection_form(self):
         new_window = tk.Toplevel(self.root)
@@ -978,7 +1389,6 @@ class SQLDeveloperEmulator:
         hostname_var = tk.StringVar()
         port_var = tk.StringVar(value="1527")
         sid_var = tk.StringVar(value="myNewDB")
-        schema_var = tk.StringVar()
 
         tk.Label(new_window, text="Nombre", bg="#1e1e1e", fg="white").grid(row=0, column=0, padx=5, pady=5)
         tk.Entry(new_window, textvariable=name_var, bg="#2e2e2e", fg="white").grid(row=0, column=1, padx=5, pady=5)
@@ -998,11 +1408,6 @@ class SQLDeveloperEmulator:
         tk.Label(new_window, text="SID", bg="#1e1e1e", fg="white").grid(row=5, column=0, padx=5, pady=5)
         tk.Entry(new_window, textvariable=sid_var, bg="#2e2e2e", fg="white").grid(row=5, column=1, padx=5, pady=5)
 
-        tk.Label(new_window, text="Schema", bg="#1e1e1e", fg="white").grid(row=6, column=0, padx=5, pady=5)
-        schema_combobox = ttk.Combobox(new_window, textvariable=schema_var, state="readonly")
-        schema_combobox.grid(row=6, column=1, padx=5, pady=5)
-        self.populate_schemas_combobox(schema_combobox)
-
         def save_connection():
             connection_info = {
                 "name": name_var.get(),
@@ -1011,13 +1416,17 @@ class SQLDeveloperEmulator:
                 "hostname": hostname_var.get(),
                 "port": port_var.get(),
                 "sid": sid_var.get(),
-                "schema": schema_var.get()
+                "schema": None  # El esquema se seleccionará después de conectar
             }
             self.connections[name_var.get()] = connection_info
             self.update_connections()
             new_window.destroy()
 
-        tk.Button(new_window, text="Guardar Conexión", bg="#3e3e3e", fg="black", command=save_connection).grid(row=7, column=0, columnspan=2, pady=10)
+        tk.Button(new_window, text="Probar Conexión", bg="#3e3e3e", fg="black",
+                command=lambda: self.test_connection(hostname_var.get(), port_var.get(), sid_var.get(), username_var.get(), password_var.get())
+                ).grid(row=6, column=0, columnspan=2, pady=5)
+
+        tk.Button(new_window, text="Guardar Conexión", bg="#3e3e3e", fg="black", command=save_connection).grid(row=7, column=0, columnspan=2, pady=5)
         tk.Button(new_window, text="Cancelar", bg="#3e3e3e", fg="black", command=new_window.destroy).grid(row=8, column=0, columnspan=2, pady=5)
 
     def test_connection(self, hostname, port, sid, username, password):
@@ -1058,24 +1467,96 @@ class SQLDeveloperEmulator:
             self.eliminarConexionBtn.config(state="disabled")
             self.conectarBtn.config(state="disabled")
 
+    def set_password_connection(self, connection_name):
+        password = simpledialog.askstring("Contraseña", f"Ingrese la contraseña para la conexión {connection_name}", show="*")
+        if password:
+            self.connections[connection_name]["password"] = password
+            self.update_connections()
+
     def connect_to_selected_connection(self):
         if self.selected_connection:
             connection_info = self.connections.get(self.selected_connection, {})
-            self.connect_to_database(connection_info)
-            print(f"Conectado a {self.selected_connection}")
+
+            if not connection_info.get('password'):
+                messagebox.showwarning("Advertencia", "Debe ingresar la contraseña para la conexión seleccionada.")
+                self.set_password_connection(self.selected_connection)
+                return
+
+
+            try:
+                # Intentamos realizar la conexión
+                jdbc_driver = '/Users/coleexz/Documents/GitHub/ApacheDerbyDBMS/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
+                driver_class = 'org.apache.derby.client.ClientAutoloadedDriver'
+                db_url = f'jdbc:derby://{connection_info.get("hostname")}:{connection_info.get("port")}/{connection_info.get("sid")};create=true'
+                self.conn = jaydebeapi.connect(driver_class, db_url, [connection_info["username"], connection_info["password"]], jdbc_driver)
+
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Conexión con {self.selected_connection} realizada exitosamente.")
+
+                # Aquí llamamos a la función para mostrar el ComboBox de esquemas y llenarlo
+                self.show_schema_selection()
+
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                messagebox.showerror("Error de conexión", f"Error al conectar con {self.selected_connection}, Verifique la informacion registrada: {str(e)}")
+                self.show_modify_connection_form()
+
 
     def connect_to_database(self, connection_info):
         try:
             jdbc_driver = '/Users/coleexz/Documents/GitHub/ApacheDerbyDBMS/db-derby-10.17.1.0-bin/lib/derbyclient.jar'
             driver_class = 'org.apache.derby.client.ClientAutoloadedDriver'
             db_url = f'jdbc:derby://{connection_info.get("hostname")}:{connection_info.get("port")}/{connection_info.get("sid")};create=true'
-            self.conn = jaydebeapi.connect(driver_class, db_url, [connection_info.get("schema"), connection_info.get("password")], jdbc_driver)
+
+
+            username = connection_info.get("username")
+            password = connection_info.get("password")
+
+            if not username:
+                messagebox.showerror("Error de conexión", "Debe ingresar un nombre de usuario válido.")
+                return
+            if not password:
+                messagebox.showerror("Error de conexión", "Debe ingresar una contraseña válida.")
+                return
+
+            print(f"Intentando conectar con el usuario: {username}")
+
+            self.conn = jaydebeapi.connect(driver_class, db_url, [username, password], jdbc_driver)
+
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Conexión con {self.selected_connection} realizada exitosamente.")
             self.update_schema()
+
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al conectar con {self.selected_connection}: {str(e)}")
+
+    def show_schema_selection(self):
+        schema_window = tk.Toplevel(self.root)
+        schema_window.title("Conexion realizada de manera exitosa")
+        schema_window.geometry("400x200")
+        schema_window.configure(bg="#1e1e1e")
+
+        tk.Label(schema_window, text="Con que esquema desea entrar a la DB?", bg="#1e1e1e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+
+        schema_var = tk.StringVar()
+        schema_combobox = ttk.Combobox(schema_window, textvariable=schema_var, state="readonly")
+        schema_combobox.grid(row=1, column=0, padx=5, pady=5)
+
+        schemas = self.get_schemas(self.connections[self.selected_connection])
+        schema_combobox['values'] = schemas
+
+        def select_schema():
+            selected_schema = schema_var.get()
+            if not selected_schema:
+                messagebox.showerror("Error", "Debe seleccionar un esquema.")
+                return
+
+            self.connections[self.selected_connection]["schema"] = selected_schema
+            self.update_schema()  # Llamar a la función cuando se cargue el formulario
+            schema_window.destroy()
+
+        tk.Button(schema_window, text="Seleccionar", bg="#3e3e3e", fg="black", command=select_schema).grid(row=2, column=0, columnspan=2, pady=10)
 
     def show_modify_connection_form(self):
         if not self.selected_connection:
@@ -1084,11 +1565,16 @@ class SQLDeveloperEmulator:
 
         connection_info = self.connections[self.selected_connection]
 
+        username = connection_info.get('username')
+        password = connection_info.get('password')
+
+
         modify_window = tk.Toplevel(self.root)
         modify_window.title("Modificar Conexión")
         modify_window.geometry("400x350")
         modify_window.configure(bg="#2e2e2e")
 
+        # Mostrar campos para modificar la conexión
         tk.Label(modify_window, text="Nombre", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
         name_var = tk.StringVar(value=self.selected_connection)
         tk.Entry(modify_window, textvariable=name_var, bg="#1e1e1e", fg="white").grid(row=0, column=1, padx=5, pady=5)
@@ -1105,19 +1591,14 @@ class SQLDeveloperEmulator:
         sid_var = tk.StringVar(value=connection_info['sid'])
         tk.Entry(modify_window, textvariable=sid_var, bg="#1e1e1e", fg="white").grid(row=3, column=1, padx=5, pady=5)
 
+        # Validar si los valores de username y password están correctamente cargados
         tk.Label(modify_window, text="Username", bg="#2e2e2e", fg="white").grid(row=4, column=0, padx=5, pady=5)
-        username_var = tk.StringVar(value=connection_info['username'])
+        username_var = tk.StringVar(value=username)
         tk.Entry(modify_window, textvariable=username_var, bg="#1e1e1e", fg="white").grid(row=4, column=1, padx=5, pady=5)
 
         tk.Label(modify_window, text="Password", bg="#2e2e2e", fg="white").grid(row=5, column=0, padx=5, pady=5)
-        password_var = tk.StringVar(value=connection_info['password'])
+        password_var = tk.StringVar(value=password)
         tk.Entry(modify_window, textvariable=password_var, show="*", bg="#1e1e1e", fg="white").grid(row=5, column=1, padx=5, pady=5)
-
-        tk.Label(modify_window, text="Schema", bg="#2e2e2e", fg="white").grid(row=6, column=0, padx=5, pady=5)
-        schema_var = tk.StringVar(value=connection_info.get('schema', ''))
-        schema_combobox = ttk.Combobox(modify_window, textvariable=schema_var, state="readonly")
-        schema_combobox.grid(row=6, column=1, padx=5, pady=5)
-        self.populate_schemas_combobox(schema_combobox)
 
         def save_changes():
             new_name = name_var.get()
@@ -1128,13 +1609,22 @@ class SQLDeveloperEmulator:
                 'sid': sid_var.get(),
                 'username': username_var.get(),
                 'password': password_var.get(),
-                'schema': schema_var.get()
             }
             self.update_connections()
             modify_window.destroy()
 
         tk.Button(modify_window, text="Guardar", bg="#3e3e3e", fg="black", command=save_changes).grid(row=7, column=0, columnspan=2, pady=10)
         tk.Button(modify_window, text="Cancelar", bg="#3e3e3e", fg="black", command=modify_window.destroy).grid(row=8, column=0, columnspan=2, pady=5)
+
+    def disconnect_from_connection(self):
+        if self.conn:
+            self.conn.close()
+            self.conn = None
+            self.resultado_text.delete(1.0, tk.END)
+            self.resultado_text.insert(tk.END, "Conexión cerrada exitosamente.")
+            self.update_schema()
+        else:
+            messagebox.showwarning("Advertencia", "No hay ninguna conexión activa.")
 
     def delete_connection(self):
         if not self.selected_connection:
@@ -1255,26 +1745,40 @@ class SQLDeveloperEmulator:
         function_name_var = tk.StringVar()
         tk.Entry(parent, textvariable=function_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=3, pady=3, sticky="w")
 
+        # ComboBox para el tipo de dato de retorno
         tk.Label(parent, text="Tipo de Retorno", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=3, pady=3, sticky="w")
         return_type_var = tk.StringVar()
-        tk.Entry(parent, textvariable=return_type_var, bg="#2e2e2e", fg="white").grid(row=2, column=1, padx=3, pady=3, sticky="w")
+        return_type_combobox = ttk.Combobox(parent, textvariable=return_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly")
+        return_type_combobox.grid(row=2, column=1, padx=3, pady=3, sticky="w")
 
+        # Entry para especificar la longitud del tipo de dato de retorno
+        tk.Label(parent, text="Longitud del Retorno", bg="#2e2e2e", fg="white").grid(row=2, column=2, padx=3, pady=3, sticky="w")
+        return_length_var = tk.StringVar()
+        tk.Entry(parent, textvariable=return_length_var, width=5, bg="#2e2e2e", fg="white").grid(row=2, column=3, padx=3, pady=3, sticky="w")
+
+        # Tabla para los parámetros
         column_frame = tk.Frame(parent, bg="#2e2e2e")
-        column_frame.grid(row=3, column=0, columnspan=2, padx=3, pady=3, sticky="w")
+        column_frame.grid(row=3, column=0, columnspan=4, padx=3, pady=3, sticky="w")
 
-        columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type", "default_value"), show="headings", height=6)
+        columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type", "length", "default_value"), show="headings", height=6)
         columns_tree.grid(row=1, column=0, columnspan=5, pady=3)
         columns_tree.heading("name", text="Nombre")
         columns_tree.heading("mode", text="Modo")
         columns_tree.heading("data_type", text="Tipo de Dato")
+        columns_tree.heading("length", text="Longitud")
         columns_tree.heading("default_value", text="Valor por Defecto")
 
+        columns_tree.column("name", width=100)
+        columns_tree.column("mode", width=60)
+        columns_tree.column("data_type", width=100)
+        columns_tree.column("length", width=60)
+        columns_tree.column("default_value", width=100)
 
         def add_parameter():
             if not param_name_var.get() or not param_mode_var.get() or not param_data_type_var.get():
                 messagebox.showerror("Error", "Debe ingresar todos los campos del parámetro.")
                 return
-            columns_tree.insert("", "end", values=(param_name_var.get(), param_mode_var.get(), param_data_type_var.get(), param_default_var.get()))
+            columns_tree.insert("", "end", values=(param_name_var.get(), param_mode_var.get(), param_data_type_var.get(), param_length_var.get(), param_default_var.get()))
 
         def delete_parameter():
             selected_item = columns_tree.selection()
@@ -1292,8 +1796,12 @@ class SQLDeveloperEmulator:
         data_type_combobox = ttk.Combobox(column_frame, textvariable=param_data_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly")
         data_type_combobox.grid(row=2, column=2, padx=3, pady=3)
 
+        # Entry para especificar la longitud del tipo de dato
+        param_length_var = tk.StringVar()
+        tk.Entry(column_frame, textvariable=param_length_var, width=5, bg="white", fg="black").grid(row=2, column=3, padx=3, pady=3)
+
         param_default_var = tk.StringVar()
-        tk.Entry(column_frame, textvariable=param_default_var, width=10, bg="white", fg="black").grid(row=2, column=3, padx=3, pady=3)
+        tk.Entry(column_frame, textvariable=param_default_var, width=10, bg="white", fg="black").grid(row=2, column=4, padx=3, pady=3)
 
         tk.Button(column_frame, text="Agregar Parámetro", command=add_parameter, bg="#3e3e3e", fg="black").grid(row=3, column=4, padx=3, pady=3)
         tk.Button(column_frame, text="Eliminar Parámetro", command=delete_parameter, bg="#3e3e3e", fg="black").grid(row=4, column=4, padx=3, pady=3)
@@ -1307,14 +1815,16 @@ class SQLDeveloperEmulator:
                 cursor = self.conn.cursor()
                 function_name = function_name_var.get()
                 return_type = return_type_var.get()
+                return_length = return_length_var.get()
                 parameters = [columns_tree.item(item, "values") for item in columns_tree.get_children()]
 
                 ddl = f"CREATE FUNCTION {function_name} ("
                 param_definitions = []
                 for param in parameters:
-                    param_definitions.append(f"{param[0]} {param[2]}")
+                    length = f"({param[3]})" if param[3] else ""
+                    param_definitions.append(f"{param[0]} {param[2]}{length}")
                 ddl += ", ".join(param_definitions)
-                ddl += f") RETURNS {return_type} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'your.java.classpath'"
+                ddl += f") RETURNS {return_type}({return_length}) LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'your.java.classpath'"
 
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, ddl)
@@ -1683,11 +2193,56 @@ class SQLDeveloperEmulator:
     def delete_index_form(self, parent):
         tk.Label(parent, text="Borrar Índice", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
+
         tk.Label(parent, text="Nombre del Índice", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
         index_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=index_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+        index_combobox = ttk.Combobox(parent, textvariable=index_name_var, state="readonly", width=30)
+        index_combobox.grid(row=1, column=1, padx=5, pady=5)
 
+        tk.Button(parent, text="Cargar Indices", bg="#3e3e3e", fg="black", command=lambda: self.populate_indexes(index_combobox)).grid(row=1, column=2, padx=5, pady=5)
+        # Botón para borrar el índice
         tk.Button(parent, text="Borrar Índice", bg="#3e3e3e", fg="black", command=lambda: self.delete_index(index_name_var.get())).grid(row=2, column=0, columnspan=2, pady=10)
+
+        # Llamar al método para llenar el ComboBox con los índices disponibles
+        self.populate_indexes(index_combobox)
+
+
+    def populate_indexes(self, combobox):
+        if self.conn:
+            try:
+                cursor = self.conn.cursor()
+
+                cursor.execute("SELECT CONGLOMERATENAME FROM SYS.SYSCONGLOMERATES WHERE ISINDEX = true")
+                indexes = cursor.fetchall()
+
+                index_names = [index[0] for index in indexes]
+                combobox['values'] = index_names
+
+                cursor.close()
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al obtener los índices: {str(e)}")
+
+
+    # Método para borrar el índice seleccionado
+    def delete_index(self, index_name):
+        if not self.conn:
+            messagebox.showerror("Error", "No hay ninguna conexión establecida.")
+            return
+
+        try:
+            cursor = self.conn.cursor()
+            query = f"DROP INDEX {index_name}"
+            self.query_text.delete(1.0, tk.END)
+            self.query_text.insert(tk.END, query)
+            cursor.execute(query)
+            self.resultado_text.delete(1.0, tk.END)
+            self.resultado_text.insert(tk.END, f"Índice {index_name} borrado exitosamente.")
+            cursor.close()
+
+        except Exception as e:
+            self.resultado_text.delete(1.0, tk.END)
+            self.resultado_text.insert(tk.END, f"Error al borrar el índice: {str(e)}")
 
     def create_index(self, index_name, table_name, columns, index_type):
         if not self.conn:
