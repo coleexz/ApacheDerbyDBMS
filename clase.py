@@ -194,7 +194,6 @@ class SQLDeveloperEmulator:
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Error al ejecutar el query: {str(e)}")
 
-
         tk.Button(parent, text="Ejecutar", command=execute_query, bg="#3e3e3e", fg="black").grid(row=2, column=0, padx=5, pady=10, sticky="e")
 
 
@@ -279,17 +278,14 @@ class SQLDeveloperEmulator:
             finally:
                 cursor.close()
 
-
         tk.Button(parent, text="OK", command=create_table, bg="#3e3e3e", fg="black").grid(row=4, column=0, padx=5, pady=10, sticky="e")
         tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=4, column=1, padx=5, pady=10, sticky="w")
-
 
     def update_schema(self):
         if self.selected_connection:
             connection_info = self.connections[self.selected_connection]
             schema = connection_info.get("schema", "")
             self.schema_var.set(schema)
-
 
     def create_trigger_form(self, parent):
         tk.Label(parent, text="Crear Trigger", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=2, pady=2)
@@ -302,7 +298,6 @@ class SQLDeveloperEmulator:
 
         tk.Label(parent, text="Esquema:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=2, pady=2, sticky="e")
         tk.Entry(parent, textvariable=self.schema_var, width=10, bg="#4a4a4a", fg="white",  state="readonly").grid(row=1, column=1, padx=2, pady=2)
-
 
         tk.Label(parent, text="Base Type:", bg="#2e2e2e", fg="white").grid(row=3, column=0, padx=2, pady=2, sticky="e")
         base_type_var = tk.StringVar()
@@ -318,7 +313,6 @@ class SQLDeveloperEmulator:
         timing_combobox = ttk.Combobox(parent, textvariable=timing_var, values=["AFTER"], width=8, state="readonly")
         timing_combobox.grid(row=5, column=1, padx=2, pady=2)
 
-        # Cambiando Listbox a Combobox para Eventos
         tk.Label(parent, text="Eventos:", bg="#2e2e2e", fg="white").grid(row=6, column=0, padx=2, pady=2, sticky="e")
         event_var = tk.StringVar()
         available_events = ttk.Combobox(parent, textvariable=event_var, values=["INSERT", "UPDATE", "DELETE"], width=8, state="readonly")
@@ -352,10 +346,8 @@ class SQLDeveloperEmulator:
                 messagebox.showerror("Error", "Por favor completa todos los campos.")
                 return
 
-            # Start forming the DDL statement
             ddl = f"CREATE TRIGGER {trigger_name} {timing} {selected_event} ON {base_object}\n"
 
-            # Add REFERENCING clause based on event type
             referencing_clause = []
             if old_ref and selected_event in ["UPDATE", "DELETE"]:
                 referencing_clause.append(f"OLD AS {old_ref}")
@@ -368,11 +360,9 @@ class SQLDeveloperEmulator:
             ddl += f"FOR EACH {'STATEMENT' if statement_level_var.get() else 'ROW'}\n"
             ddl += f"{sql_body}"
 
-            # Print DDL to query_text and execute
             self.query_text.delete(1.0, tk.END)
             self.query_text.insert(tk.END, ddl)
 
-            # execute ddl
             if not self.conn:
                 messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
                 return
@@ -391,9 +381,7 @@ class SQLDeveloperEmulator:
 
             cursor.close()
 
-
         tk.Button(parent, text="Crear Trigger", command=create_trigger, bg="#3e3e3e", fg="black").grid(row=11, column=1, padx=2, pady=2)
-
 
     def create_view_form(self, parent):
         tk.Label(parent, text="Crear Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
@@ -444,13 +432,11 @@ class SQLDeveloperEmulator:
     def create_check_form(self, parent):
         tk.Label(parent, text="Crear CHECK Constraint", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
-        # Label and button to load tables
         tk.Label(parent, text="Seleccionar Tabla:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="e")
         table_name_var = tk.StringVar()
         table_combobox = ttk.Combobox(parent, textvariable=table_name_var, state="readonly")
         table_combobox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
-        # Botón para cargar las tablas
         def load_tables():
             tables = self.get_tables()
             if tables:
@@ -458,24 +444,20 @@ class SQLDeveloperEmulator:
 
         tk.Button(parent, text="Cargar Tablas", command=load_tables, bg="#3e3e3e", fg="black").grid(row=1, column=2, padx=5, pady=5)
 
-        # Column name
         tk.Label(parent, text="Nombre de la Columna:", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="e")
         column_name_var = tk.StringVar()
         column_name_entry = tk.Entry(parent, textvariable=column_name_var, bg="#2e2e2e", fg="white")
         column_name_entry.grid(row=2, column=1, padx=5, pady=5, sticky="w")
 
-        # Constraint name
         tk.Label(parent, text="Nombre de la Restricción:", bg="#2e2e2e", fg="white").grid(row=3, column=0, padx=5, pady=5, sticky="e")
         constraint_name_var = tk.StringVar()
         constraint_name_entry = tk.Entry(parent, textvariable=constraint_name_var, bg="#2e2e2e", fg="white")
         constraint_name_entry.grid(row=3, column=1, padx=5, pady=5, sticky="w")
 
-        # Check condition
         tk.Label(parent, text="Condición del CHECK:", bg="#2e2e2e", fg="white").grid(row=4, column=0, padx=5, pady=5, sticky="e")
         check_condition_var = tk.StringVar()
         tk.Entry(parent, textvariable=check_condition_var, bg="#2e2e2e", fg="white").grid(row=4, column=1, padx=5, pady=5, sticky="w")
 
-        # Function to create the CHECK constraint
         def create_check():
             table_name = table_name_var.get()
             column_name = column_name_var.get()
@@ -504,9 +486,7 @@ class SQLDeveloperEmulator:
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Error al añadir la CHECK Constraint: {str(e)}")
 
-        # Add button to create the CHECK constraint
         tk.Button(parent, text="Crear CHECK", command=create_check, bg="#3e3e3e", fg="black").grid(row=5, column=1, padx=5, pady=10, sticky="e")
-
 
     def get_tables(self):
         if not self.conn:
@@ -523,20 +503,16 @@ class SQLDeveloperEmulator:
             return []
 
     def create_schema_form(self, parent):
-        # Título del formulario
         tk.Label(parent, text="Crear Esquema", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
-        # Campo para el nombre del esquema
         tk.Label(parent, text="Nombre del Esquema:", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5, sticky="e")
         schema_name_var = tk.StringVar()
         tk.Entry(parent, textvariable=schema_name_var, bg="#4a4a4a", fg="white").grid(row=1, column=1, padx=5, pady=5)
 
-        # Campo para autorizar a un usuario
         tk.Label(parent, text="Usuario Autorizado (Opcional):", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="e")
         user_name_var = tk.StringVar()
         tk.Entry(parent, textvariable=user_name_var, bg="#4a4a4a", fg="white").grid(row=2, column=1, padx=5, pady=5)
 
-        # Función para crear el esquema
         def create_schema():
             schema_name = schema_name_var.get()
             user_name = user_name_var.get()
@@ -545,7 +521,6 @@ class SQLDeveloperEmulator:
                 messagebox.showerror("Error", "El nombre del esquema es obligatorio.")
                 return
 
-            # Crear la sentencia SQL dependiendo de si se especifica o no un usuario
             if user_name:
                 query = f"CREATE SCHEMA {schema_name} AUTHORIZATION {user_name}"
             else:
@@ -555,7 +530,6 @@ class SQLDeveloperEmulator:
                 messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
                 return
 
-            # Ejecutar la consulta
             try:
                 cursor = self.conn.cursor()
                 self.query_text.delete(1.0, tk.END)
@@ -570,13 +544,11 @@ class SQLDeveloperEmulator:
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Error al crear el esquema: {str(e)}")
 
-        # Botón para crear el esquema
         tk.Button(parent, text="Crear Esquema", bg="#3e3e3e", fg="black", command=create_schema).grid(row=3, column=0, columnspan=2, pady=10)
 
 #=======================================================================================================================
 #MODIFY-FORMS
     def modify_table_form(self, parent):
-
         tk.Label(parent, text="Seleccione la Tabla:", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
         table_name_var = tk.StringVar()
@@ -592,25 +564,50 @@ class SQLDeveloperEmulator:
         ddl_text.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
 
         def load_table_ddl():
+
             table_name = table_name_var.get()
+            schema_name = self.schema_var.get()
+
             if not table_name:
-                messagebox.showerror("Error", "Debe seleccionar una tabla para obtener su DDL.")
+                messagebox.showerror("Error", "Debe seleccionar una tabla.")
                 return
 
             try:
                 cursor = self.conn.cursor()
 
-                cursor.execute(f"SELECT * FROM SYS.SYSCOLUMNS WHERE REFERENCEID IN (SELECT TABLEID FROM SYS.SYSTABLES WHERE TABLENAME = '{table_name}')")
+                query = f"""
+                SELECT C.COLUMNNAME,
+                    CASE
+                        WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'VARCHAR' THEN 'VARCHAR(' || C.COLUMNDATATYPE || ')'
+                        WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'CHAR' THEN 'CHAR(' || C.COLUMNDATATYPE || ')'
+                        WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'INTEGER' THEN 'INTEGER'
+                        WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'DOUBLE' THEN 'DOUBLE PRECISION'
+                        ELSE CAST(C.COLUMNDATATYPE AS VARCHAR(128))
+                    END AS COLUMNDATATYPE,
+                    C.COLUMNDEFAULT,
+                    CASE WHEN C.AUTOINCREMENTVALUE IS NOT NULL THEN 'AUTO_INCREMENT' ELSE '' END AS AUTOINCREMENT
+                FROM SYS.SYSSCHEMAS S
+                JOIN SYS.SYSTABLES T ON S.SCHEMAID = T.SCHEMAID
+                JOIN SYS.SYSCOLUMNS C ON T.TABLEID = C.REFERENCEID
+                WHERE CAST(S.SCHEMANAME AS VARCHAR(128)) = '{schema_name.upper()}'
+                AND CAST(T.TABLENAME AS VARCHAR(128)) = '{table_name.upper()}'
+                """
+                cursor.execute(query)
                 columns = cursor.fetchall()
 
-                ddl = f"CREATE TABLE {table_name} (\n"
+                ddl = f"CREATE TABLE {schema_name}.{table_name} (\n"
                 column_definitions = []
-                for col in columns:
-                    column_def = f"  {col[0]} {col[1]}"
-                    if col[2] == "NO":
-                        column_def += " NOT NULL"
+                for column in columns:
+                    column_name = column[0]
+                    column_type = column[1]
+                    default_value = column[2] if column[2] else 'NULL'
+                    auto_increment = column[3]
+                    column_def = f"    {column_name} {column_type}"
+                    if auto_increment:
+                        column_def += f" {auto_increment}"
+                    column_def += f" DEFAULT {default_value}"
                     column_definitions.append(column_def)
-                ddl += ",\n".join(column_definitions) + "\n);"
+                ddl += ",\n".join(column_definitions) + "\n)"
 
                 ddl_text.delete(1.0, tk.END)
                 ddl_text.insert(tk.END, ddl)
@@ -618,13 +615,30 @@ class SQLDeveloperEmulator:
                 cursor.close()
 
             except Exception as e:
-                messagebox.showerror("Error", f"Ocurrió un error al obtener el DDL de la tabla: {str(e)}")
+                ddl_text.delete(1.0, tk.END)
+                ddl_text.insert(tk.END, f"Error al cargar el DDL de la tabla: {str(e)}")
 
         tk.Button(parent, text="Cargar DDL", command=load_table_ddl, bg="#3e3e3e", fg="black").grid(row=2, column=2, padx=5, pady=5)
 
         def execute_ddl():
             try:
                 cursor = self.conn.cursor()
+
+                table_name = table_name_var.get()
+                schema_name = self.schema_var.get()
+
+                if not table_name or not schema_name:
+                    messagebox.showerror("Error", "Debe seleccionar una tabla y un esquema.")
+                    return
+
+                drop_query = f"DROP TABLE {schema_name}.{table_name}"
+                try:
+                    cursor.execute(drop_query)
+                    self.conn.commit()
+                    self.resultado_text.delete(1.0, tk.END)
+                except Exception as e:
+                    self.resultado_text.delete(1.0, tk.END)
+                    self.resultado_text.insert(tk.END, f"Advertencia: No se pudo eliminar la tabla o no existe: {str(e)}\n")
 
                 ddl = ddl_text.get(1.0, tk.END).strip()
 
@@ -634,7 +648,6 @@ class SQLDeveloperEmulator:
                 cursor.execute(ddl)
                 self.conn.commit()
 
-                self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, "DDL ejecutado exitosamente.")
 
                 cursor.close()
@@ -861,7 +874,7 @@ class SQLDeveloperEmulator:
 
             try:
                 cursor = self.conn.cursor()
-                cursor.execute(f"SELECT VIEWDEFINITION FROM SYS.SYSVIEWS WHERE VIEWNAME = '{view_name}'")
+                cursor.execute(f"SELECT V.VIEWDEFINITION FROM SYS.SYSVIEWS V JOIN SYS.SYSTABLES T ON V.TABLEID = T.TABLEID WHERE T.TABLENAME = '{view_name}'")
                 result = cursor.fetchone()
 
                 if result:
@@ -1462,10 +1475,12 @@ class SQLDeveloperEmulator:
             self.modificarConexionBtn.config(state="normal")
             self.eliminarConexionBtn.config(state="normal")
             self.conectarBtn.config(state="normal")
+            self.desconectarBtn.config(state="normal")
         else:
             self.modificarConexionBtn.config(state="disabled")
             self.eliminarConexionBtn.config(state="disabled")
             self.conectarBtn.config(state="disabled")
+            self.desconectarBtn.config(state="disabled")
 
     def set_password_connection(self, connection_name):
         password = simpledialog.askstring("Contraseña", f"Ingrese la contraseña para la conexión {connection_name}", show="*")
@@ -1646,33 +1661,46 @@ class SQLDeveloperEmulator:
 
         tk.Label(parent, text="Nombre del Procedimiento", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
         self.procedure_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=self.procedure_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+        tk.Entry(parent, textvariable=self.procedure_name_var, bg="#2e2e2e", fg="white", width=30).grid(row=1, column=1, padx=5, pady=5)
 
         column_frame = tk.Frame(parent, bg="#2e2e2e")
         column_frame.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="w")
 
-        self.columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type"), show="headings", height=6)
-        self.columns_tree.grid(row=1, column=0, columnspan=3, pady=5)
+        # Ajustar ancho de columnas para que coincidan con los `Entry`
+        self.columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type", "size"), show="headings", height=6)
+        self.columns_tree.grid(row=1, column=0, columnspan=4, pady=5)
+
         self.columns_tree.heading("name", text="Nombre")
         self.columns_tree.heading("mode", text="Modo")
         self.columns_tree.heading("data_type", text="Tipo de Dato")
+        self.columns_tree.heading("size", text="Tamaño")
 
+        self.columns_tree.column("name", width=150)  # Ajustar el ancho a 150
+        self.columns_tree.column("mode", width=90)  # Ajustar el ancho a 90
+        self.columns_tree.column("data_type", width=120)  # Ajustar el ancho a 120
+        self.columns_tree.column("size", width=60)  # Ajustar el ancho a 60
+
+        # Campos de entrada para atributos
         name_var = tk.StringVar()
         tk.Entry(column_frame, textvariable=name_var, width=15, bg="white", fg="black").grid(row=2, column=0, padx=5, pady=5)
 
         mode_var = tk.StringVar()
-        mode_combobox = ttk.Combobox(column_frame, textvariable=mode_var, values=["IN", "OUT", "INOUT"], state="readonly")
+        mode_combobox = ttk.Combobox(column_frame, textvariable=mode_var, values=["IN", "OUT", "INOUT"], state="readonly", width=8)
         mode_combobox.grid(row=2, column=1, padx=5, pady=5)
 
         data_type_var = tk.StringVar()
-        data_type_combobox = ttk.Combobox(column_frame, textvariable=data_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly")
+        data_type_combobox = ttk.Combobox(column_frame, textvariable=data_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly", width=10)
         data_type_combobox.grid(row=2, column=2, padx=5, pady=5)
+
+        size_var = tk.StringVar()
+        tk.Entry(column_frame, textvariable=size_var, width=5, bg="white", fg="black").grid(row=2, column=3, padx=5, pady=5)
 
         def add_column():
             if not name_var.get() or not mode_var.get() or not data_type_var.get():
                 messagebox.showerror("Error", "Debe ingresar todos los valores del atributo.")
                 return
-            self.columns_tree.insert("", "end", values=(name_var.get(), mode_var.get(), data_type_var.get()))
+            size = size_var.get() if data_type_var.get() == "VARCHAR" else ""
+            self.columns_tree.insert("", "end", values=(name_var.get(), mode_var.get(), data_type_var.get(), size))
 
         def delete_column():
             selected_item = self.columns_tree.selection()
@@ -1680,7 +1708,7 @@ class SQLDeveloperEmulator:
                 self.columns_tree.delete(selected_item)
 
         button_frame = tk.Frame(column_frame, bg="#2e2e2e")
-        button_frame.grid(row=3, column=0, columnspan=3, pady=5, sticky="ew")
+        button_frame.grid(row=3, column=0, columnspan=4, pady=5, sticky="ew")
 
         tk.Button(button_frame, text="Agregar Atributo", command=add_column, bg="#3e3e3e", fg="black").pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Eliminar Atributo", command=delete_column, bg="#3e3e3e", fg="black").pack(side=tk.LEFT, padx=5)
@@ -1700,8 +1728,9 @@ class SQLDeveloperEmulator:
             param_mode = param[1]
             param_name = param[0]
             param_type = param[2]
+            param_size = f"({param[3]})" if param_type == "VARCHAR" and param[3] else ""
 
-            param_def = f"{param_mode} {param_name} {param_type}"
+            param_def = f"{param_mode} {param_name} {param_type}{param_size}"
             param_definitions.append(param_def)
 
         ddl = f"""
@@ -1720,14 +1749,20 @@ class SQLDeveloperEmulator:
             cursor = self.conn.cursor()
             cursor.execute(ddl)
             self.conn.commit()
-            cursor.close()
+
+
+            insert_query = "INSERT INTO SYSPROCEDURES (PROCEDURE_NAME, DEFINITION) VALUES (?, ?)"
+            cursor.execute(insert_query, (procedure_name, ddl))
+            self.conn.commit()
 
             self.resultado_text.delete(1.0, tk.END)
-            self.resultado_text.insert(tk.END, f"Procedimiento '{procedure_name}' creado exitosamente.")
+            self.resultado_text.insert(tk.END, f"Procedimiento '{procedure_name}' creado exitosamente y almacenado en SYSPROCEDURES.")
+            cursor.close()
 
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al crear el procedimiento: {str(e)}")
+
 
     def delete_stored_procedure_form(self, parent):
         tk.Label(parent, text="Borrar Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
@@ -1751,7 +1786,7 @@ class SQLDeveloperEmulator:
         return_type_combobox = ttk.Combobox(parent, textvariable=return_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly")
         return_type_combobox.grid(row=2, column=1, padx=3, pady=3, sticky="w")
 
-        # Entry para especificar la longitud del tipo de dato de retorno
+        # Entry para especificar la longitud del tipo de dato de retorno (solo se usa si es VARCHAR)
         tk.Label(parent, text="Longitud del Retorno", bg="#2e2e2e", fg="white").grid(row=2, column=2, padx=3, pady=3, sticky="w")
         return_length_var = tk.StringVar()
         tk.Entry(parent, textvariable=return_length_var, width=5, bg="#2e2e2e", fg="white").grid(row=2, column=3, padx=3, pady=3, sticky="w")
@@ -1818,21 +1853,38 @@ class SQLDeveloperEmulator:
                 return_length = return_length_var.get()
                 parameters = [columns_tree.item(item, "values") for item in columns_tree.get_children()]
 
+                if return_type == "VARCHAR":
+                    return_definition = f"{return_type}({return_length})"
+                else:
+                    return_definition = return_type
+
                 ddl = f"CREATE FUNCTION {function_name} ("
                 param_definitions = []
                 for param in parameters:
-                    length = f"({param[3]})" if param[3] else ""
+                    length = ""
+                    if param[2] == "VARCHAR":
+                        length = f"({param[3]})" if param[3] else ""
                     param_definitions.append(f"{param[0]} {param[2]}{length}")
                 ddl += ", ".join(param_definitions)
-                ddl += f") RETURNS {return_type}({return_length}) LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'your.java.classpath'"
+                if return_type == "INT":
+                    ddl += f") RETURNS {return_definition} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'java.lang.Math.abs'"
+                elif return_type == "VARCHAR":
+                    ddl += f") RETURNS {return_definition} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'java.lang.String.toUpperCase'"
+                elif return_type == "FLOAT":
+                    ddl += f") RETURNS {return_definition} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'java.lang.Math.sqrt'"
 
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, ddl)
 
                 cursor.execute(ddl)
                 self.conn.commit()
+
+                insert_query = f"INSERT INTO SYSFUNCTIONS (FUNCTION_NAME, DEFINITION) VALUES ('{function_name}', '{ddl}')"
+                cursor.execute(insert_query)
+                self.conn.commit()
+
                 self.resultado_text.delete(1.0, tk.END)
-                self.resultado_text.insert(tk.END, f"Función {function_name} creada exitosamente.")
+                self.resultado_text.insert(tk.END, f"Función '{function_name}' creada exitosamente y almacenada en SYSFUNCTIONS.")
                 cursor.close()
 
             except Exception as e:
@@ -1898,7 +1950,6 @@ class SQLDeveloperEmulator:
 
         tk.Button(parent, text="Borrar", bg="#3e3e3e", fg="black", command=lambda: self.delete_function(function_name_var.get())).grid(row=2, column=0, columnspan=2, pady=10)
 
-
     def modify_stored_procedure_form(self, parent):
         tk.Label(parent, text="Modificar Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
@@ -1917,7 +1968,6 @@ class SQLDeveloperEmulator:
 
         tk.Button(parent, text="Modificar Procedimiento", bg="#3e3e3e", fg="black", command=lambda: self.modify_stored_procedure(procedure_name_var.get(), procedure_code_text.get("1.0", tk.END))).grid(row=4, column=0, columnspan=2, pady=10)
 
-
     def load_procedures(self, combobox):
         try:
             cursor = self.conn.cursor()
@@ -1929,22 +1979,38 @@ class SQLDeveloperEmulator:
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al cargar los procedimientos: {str(e)}")
 
-
     def get_procedure_ddl(self, procedure_name):
         if not procedure_name:
             messagebox.showerror("Error", "Debe seleccionar un procedimiento.")
             return
+
         try:
             cursor = self.conn.cursor()
-            cursor.execute(f"SELECT ALIASINFO FROM SYS.SYSALIASES WHERE ALIAS = '{procedure_name}'")
-            ddl = cursor.fetchone()
-            self.query_text.delete(1.0, tk.END)
-            self.query_text.insert(tk.END, ddl[0] if ddl else "No se encontró el DDL.")
+
+            # Buscar el DDL en la tabla SYSPROCEDURES
+            cursor.execute(f"SELECT DEFINITION FROM SYSPROCEDURES WHERE PROCEDURE_NAME = '{procedure_name}'")
+            result = cursor.fetchone()
+
+            if result:
+                ddl_clob = result[0]
+                if isinstance(ddl_clob, str):
+                    ddl = ddl_clob  # Si es una cadena, la utilizamos directamente
+                else:
+                    ddl = ddl_clob.read()  # Si es un CLOB, usamos read() para obtener el contenido
+
+                # Mostrar el DDL recuperado
+                self.query_text.delete(1.0, tk.END)
+                self.query_text.insert(tk.END, ddl)
+            else:
+                # Si no se encuentra el DDL, mostrar un mensaje de error
+                self.query_text.delete(1.0, tk.END)
+                self.query_text.insert(tk.END, "No se encontró el DDL en SYSPROCEDURES.")
+
             cursor.close()
+
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al obtener el DDL: {str(e)}")
-
 
     def modify_stored_procedure(self, name, new_code):
         if not self.conn:
@@ -1953,19 +2019,46 @@ class SQLDeveloperEmulator:
 
         try:
             cursor = self.conn.cursor()
+
+            # Primero, eliminamos el procedimiento almacenado original
             drop_query = f"DROP PROCEDURE {name}"
-            create_query = f"CREATE PROCEDURE {name} AS {new_code}"
+
+            # Creamos el nuevo procedimiento
+            create_query = f"""
+            CREATE PROCEDURE {name} AS
+            {new_code.strip().replace("'", "''")}
+            """
+
+            # Eliminar el DDL antiguo de SYSPROCEDURES
+            delete_sysproc_query = f"DELETE FROM SYSPROCEDURES WHERE PROCEDURE_NAME = '{name}'"
+
+            # Insertar el nuevo DDL en SYSPROCEDURES
+            insert_sysproc_query = f"""
+            INSERT INTO SYSPROCEDURES (PROCEDURE_NAME, DEFINITION)
+            VALUES ('{name}', '{new_code.strip().replace("'", "''")}')
+            """
+
+            # Ejecutamos las consultas
             self.query_text.delete(1.0, tk.END)
-            self.query_text.insert(tk.END, f"{drop_query};\n{create_query}")
+            self.query_text.insert(tk.END, f"{drop_query};\n{create_query};\n{delete_sysproc_query};\n{insert_sysproc_query}")
+
+            # Ejecutar la eliminación y creación del procedimiento original
             cursor.execute(drop_query)
             cursor.execute(create_query)
+            self.conn.commit()
+
+            # Actualizar la tabla SYSPROCEDURES
+            cursor.execute(delete_sysproc_query)
+            cursor.execute(insert_sysproc_query)
+            self.conn.commit()
+
             self.resultado_text.delete(1.0, tk.END)
-            self.resultado_text.insert(tk.END, f"Procedimiento {name} modificado exitosamente.")
+            self.resultado_text.insert(tk.END, f"Procedimiento {name} modificado exitosamente y actualizado en SYSPROCEDURES.")
             cursor.close()
+
         except Exception as e:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al modificar el procedimiento: {str(e)}")
-
 
     def delete_stored_procedure(self, name):
         if not self.conn:
@@ -2030,7 +2123,6 @@ class SQLDeveloperEmulator:
             self.resultado_text.delete(1.0, tk.END)
             self.resultado_text.insert(tk.END, f"Error al crear la función: {str(e)}")
 
-
     def load_functions(self, combobox):
         try:
             if not self.conn:
@@ -2049,7 +2141,6 @@ class SQLDeveloperEmulator:
 
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al cargar las funciones: {str(e)}")
-
 
     def modify_stored_function(self, name, new_code):
         if not self.conn:
@@ -2151,7 +2242,6 @@ class SQLDeveloperEmulator:
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al listar los {option.lower()}s: {str(e)}")
 
-
     def create_index_form(self, parent):
         tk.Label(parent, text="Crear Índice", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
@@ -2206,7 +2296,6 @@ class SQLDeveloperEmulator:
         # Llamar al método para llenar el ComboBox con los índices disponibles
         self.populate_indexes(index_combobox)
 
-
     def populate_indexes(self, combobox):
         if self.conn:
             try:
@@ -2223,8 +2312,6 @@ class SQLDeveloperEmulator:
             except Exception as e:
                 messagebox.showerror("Error", f"Error al obtener los índices: {str(e)}")
 
-
-    # Método para borrar el índice seleccionado
     def delete_index(self, index_name):
         if not self.conn:
             messagebox.showerror("Error", "No hay ninguna conexión establecida.")
