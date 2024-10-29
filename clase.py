@@ -6,11 +6,17 @@ import atexit
 
 class SQLDeveloperEmulator:
     def __init__(self, root):
+
+
+
         self.root = root
         self.root.title("デー タベース管理シ")
-        self.root.geometry("1024x600")
+        self.root.geometry("1200x800")
         self.root.configure(bg="#1e1e1e")
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
+
+        self.root.rowconfigure(0, weight=1)
+        self.root.columnconfigure(0, weight=1)
 
         style = ttk.Style()
         style.theme_use("clam")
