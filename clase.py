@@ -6,9 +6,6 @@ import atexit
 
 class SQLDeveloperEmulator:
     def __init__(self, root):
-
-
-
         self.root = root
         self.root.title("デー タベース管理シ")
         self.root.geometry("1200x800")
@@ -202,33 +199,54 @@ class SQLDeveloperEmulator:
 
         tk.Button(parent, text="Ejecutar", command=execute_query, bg="#3e3e3e", fg="black").grid(row=2, column=0, padx=5, pady=10, sticky="e")
 
-
     def create_table_form(self, parent):
         tk.Label(parent, text="Nombre de la Tabla:", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         table_name_var = tk.StringVar()
         tk.Entry(parent, textvariable=table_name_var, bg="#2e2e2e", fg="white").grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
+        # Ajustar el frame de las columnas para expandir en toda la página
         column_frame = tk.Frame(parent, bg="#2e2e2e")
-        column_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky="w")
+        column_frame.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")
+        parent.grid_rowconfigure(1, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
 
-        columns_tree = ttk.Treeview(column_frame, columns=("name", "data_type", "size", "not_null"), show="headings", height=6)
-        columns_tree.grid(row=1, column=0, columnspan=5, pady=5)
+        # Tabla de columnas expandida
+        columns_tree = ttk.Treeview(column_frame, columns=("name", "data_type", "size", "not_null", "pk", "fk"), show="headings", height=6)
+        columns_tree.grid(row=1, column=0, columnspan=6, pady=5, sticky="nsew")
+        column_frame.grid_rowconfigure(1, weight=1)
+        column_frame.grid_columnconfigure(0, weight=1)
+
+        # Encabezados de las columnas
         columns_tree.heading("name", text="Nombre")
         columns_tree.heading("data_type", text="Tipo de Dato")
         columns_tree.heading("size", text="Tamaño")
         columns_tree.heading("not_null", text="Not Null")
+        columns_tree.heading("pk", text="PK")
+        columns_tree.heading("fk", text="FK")
 
+        # Ajustar ancho de las columnas
+        columns_tree.column("name", width=100, anchor='center')
+        columns_tree.column("data_type", width=100, anchor='center')
+        columns_tree.column("size", width=50, anchor='center')
+        columns_tree.column("not_null", width=70, anchor='center')
+        columns_tree.column("pk", width=50, anchor='center')
+        columns_tree.column("fk", width=150, anchor='center')
+
+        # Función para agregar columna
         def add_column():
-            if not name_var.get() or not data_type_var.get() or not size_var.get():
+            if not name_var.get() or not data_type_var.get() or (data_type_var.get() != "INT" and not size_var.get()):
                 messagebox.showerror("Error", "Debe ingresar el nombre, tipo de dato y tamaño de la columna.")
                 return
-            columns_tree.insert("", "end", values=(name_var.get(), data_type_var.get(), size_var.get(), "NOT NULL" if not_null_var.get() else ""))
+            fk_value = fk_var.get() if fk_var.get() else ""
+            columns_tree.insert("", "end", values=(name_var.get(), data_type_var.get(), size_var.get(), "NOT NULL" if not_null_var.get() else "", "PK" if pk_var.get() else "", fk_value))
 
+        # Función para eliminar columna
         def delete_column():
             selected_item = columns_tree.selection()
             if selected_item:
                 columns_tree.delete(selected_item)
 
+        # Entradas para los detalles de las columnas
         name_var = tk.StringVar()
         tk.Entry(column_frame, textvariable=name_var, width=15, bg="white", fg="black").grid(row=2, column=0, padx=5, pady=5)
 
@@ -242,9 +260,17 @@ class SQLDeveloperEmulator:
         not_null_var = tk.BooleanVar()
         tk.Checkbutton(column_frame, text="Not Null", variable=not_null_var, bg="#2e2e2e", fg="white").grid(row=2, column=3, padx=5, pady=5)
 
-        tk.Button(column_frame, text="Agregar Columna", command=add_column, bg="#3e3e3e", fg="black").grid(row=2, column=4, padx=5, pady=5)
-        tk.Button(column_frame, text="Eliminar Columna", command=delete_column, bg="#3e3e3e", fg="black").grid(row=3, column=4, padx=5, pady=5)
+        pk_var = tk.BooleanVar()
+        tk.Checkbutton(column_frame, text="PK", variable=pk_var, bg="#2e2e2e", fg="white").grid(row=2, column=4, padx=5, pady=5)
 
+        fk_var = tk.StringVar()
+        tk.Entry(column_frame, textvariable=fk_var, width=15, bg="white", fg="black").grid(row=2, column=5, padx=5, pady=5)
+
+        # Botones para agregar y eliminar columnas
+        tk.Button(column_frame, text="Agregar Columna", command=add_column, bg="#3e3e3e", fg="black").grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="w")
+        tk.Button(column_frame, text="Eliminar Columna", command=delete_column, bg="#3e3e3e", fg="black").grid(row=3, column=3, columnspan=3, padx=5, pady=5, sticky="e")
+
+        # Función para crear la tabla
         def create_table():
             if not self.conn:
                 messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
@@ -258,19 +284,39 @@ class SQLDeveloperEmulator:
 
                 ddl = f"CREATE TABLE {table_name} (\n"
                 column_definitions = []
+                primary_keys = []
+                foreign_keys = []
+
                 for col in columns:
                     if col[1] == "INT" or col[1] == "FLOAT":
                         column_def = f"  {col[0]} {col[1]}"
                     else:
                         column_def = f"  {col[0]} {col[1]}({col[2]})"
+
                     if col[3]:
                         column_def += " NOT NULL"
+                    if col[4] == "PK":
+                        primary_keys.append(col[0])
+                    if col[5]:
+                        foreign_keys.append((col[0], col[5]))
+
                     column_definitions.append(column_def)
+
+                # Agregar definición de llaves primarias
+                if primary_keys:
+                    column_definitions.append(f"  PRIMARY KEY ({', '.join(primary_keys)})")
+
+                # Agregar definición de llaves foráneas
+                for fk in foreign_keys:
+                    column_definitions.append(f"  FOREIGN KEY ({fk[0]}) REFERENCES {fk[1]}")
+
                 ddl += ",\n".join(column_definitions) + "\n)"
 
+                # Mostrar el DDL en el cuadro de texto de consulta
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, ddl)
 
+                # Ejecutar la consulta para crear la tabla
                 cursor.execute(ddl)
                 self.conn.commit()
 
@@ -284,8 +330,11 @@ class SQLDeveloperEmulator:
             finally:
                 cursor.close()
 
+        # Botones OK y Cancelar
         tk.Button(parent, text="OK", command=create_table, bg="#3e3e3e", fg="black").grid(row=4, column=0, padx=5, pady=10, sticky="e")
         tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=4, column=1, padx=5, pady=10, sticky="w")
+
+
 
     def update_schema(self):
         if self.selected_connection:
@@ -586,7 +635,7 @@ class SQLDeveloperEmulator:
                     CASE
                         WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'VARCHAR' THEN 'VARCHAR(' || C.COLUMNDATATYPE || ')'
                         WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'CHAR' THEN 'CHAR(' || C.COLUMNDATATYPE || ')'
-                        WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'INTEGER' THEN 'INTEGER'
+                        WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'INTEGER' THEN 'INT'
                         WHEN CAST(C.COLUMNDATATYPE AS VARCHAR(128)) = 'DOUBLE' THEN 'DOUBLE PRECISION'
                         ELSE CAST(C.COLUMNDATATYPE AS VARCHAR(128))
                     END AS COLUMNDATATYPE,
@@ -606,12 +655,10 @@ class SQLDeveloperEmulator:
                 for column in columns:
                     column_name = column[0]
                     column_type = column[1]
-                    default_value = column[2] if column[2] else 'NULL'
                     auto_increment = column[3]
                     column_def = f"    {column_name} {column_type}"
                     if auto_increment:
                         column_def += f" {auto_increment}"
-                    column_def += f" DEFAULT {default_value}"
                     column_definitions.append(column_def)
                 ddl += ",\n".join(column_definitions) + "\n)"
 
@@ -627,6 +674,13 @@ class SQLDeveloperEmulator:
         tk.Button(parent, text="Cargar DDL", command=load_table_ddl, bg="#3e3e3e", fg="black").grid(row=2, column=2, padx=5, pady=5)
 
         def execute_ddl():
+
+            #get the table name from the ddl
+            nombretabla = ddl_text.get(1.0, tk.END).strip()
+            nombretabla = nombretabla.split(" ")[2]
+            nombretabla = nombretabla.split(".")[1]
+            print(nombretabla)
+
             try:
                 cursor = self.conn.cursor()
 
@@ -637,6 +691,18 @@ class SQLDeveloperEmulator:
                     messagebox.showerror("Error", "Debe seleccionar una tabla y un esquema.")
                     return
 
+                ddl = ddl_text.get(1.0, tk.END).strip()
+
+                if not ddl.startswith(f"CREATE TABLE {schema_name}.{table_name}"):
+                    messagebox.showerror("Error", "El DDL no coincide con la tabla seleccionada.")
+                    return
+
+                print(table_name_combobox.get())
+
+                if table_name_combobox.get() != nombretabla:
+                    messagebox.showerror("Error", "El nombre de la tabla no coincide con el nombre del DDL proporcionado.")
+                    return
+
                 drop_query = f"DROP TABLE {schema_name}.{table_name}"
                 try:
                     cursor.execute(drop_query)
@@ -645,8 +711,6 @@ class SQLDeveloperEmulator:
                 except Exception as e:
                     self.resultado_text.delete(1.0, tk.END)
                     self.resultado_text.insert(tk.END, f"Advertencia: No se pudo eliminar la tabla o no existe: {str(e)}\n")
-
-                ddl = ddl_text.get(1.0, tk.END).strip()
 
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, ddl)
@@ -851,12 +915,10 @@ class SQLDeveloperEmulator:
     def modify_view_form(self, parent):
         tk.Label(parent, text="Modificar Vista", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
-        # Create the Combobox for selecting a view, initially empty
         view_name_var = tk.StringVar()
         view_combobox = ttk.Combobox(parent, textvariable=view_name_var, state="readonly")
         view_combobox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
-        # Button to load the views into the Combobox
         def load_views():
             views = self.get_views()
             if views:
@@ -866,7 +928,6 @@ class SQLDeveloperEmulator:
 
         tk.Button(parent, text="Cargar Vistas", command=load_views, bg="#3e3e3e", fg="black").grid(row=1, column=1, padx=5, pady=5)
 
-        # Label and Textbox for showing the view's SQL query
         tk.Label(parent, text="Consulta SQL de la Vista:", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5, sticky="e")
         query_text = tk.Text(parent, height=5, bg="#2e2e2e", fg="white", insertbackground="white")
         query_text.grid(row=2, column=1, padx=5, pady=5, sticky="we")
@@ -901,6 +962,12 @@ class SQLDeveloperEmulator:
 
             if not view_name or not modified_query:
                 messagebox.showerror("Error", "Debe completar los campos de nombre y consulta SQL.")
+                return
+
+            nombrevista = modified_query.split(" ")[2]
+
+            if nombrevista.upper() != view_combobox.get():
+                messagebox.showerror("Error", "El nombre de la vista no coincide con el nombre seleccionado.")
                 return
 
             try:
@@ -2269,12 +2336,34 @@ class SQLDeveloperEmulator:
 
         tk.Button(parent, text="Crear Índice", bg="#3e3e3e", fg="black", command=lambda: self.create_index(index_name_var.get(), table_name_var.get(), columns_var.get(), index_type_var.get())).grid(row=5, column=0, columnspan=2, pady=10)
 
+
+
+    def load_indexes(self, combobox):
+            if not self.conn:
+                messagebox.showerror("Error", "No hay ninguna conexión establecida.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("SELECT CONGLOMERATENAME FROM SYS.SYSCONGLOMERATES WHERE ISINDEX = true")
+                indexes = cursor.fetchall()
+                index_names = [index[0] for index in indexes]
+                combobox['values'] = index_names
+                cursor.close()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al obtener los índices: {str(e)}")
+
+
     def modify_index_form(self, parent):
         tk.Label(parent, text="Modificar Índice", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
         tk.Label(parent, text="Nombre del Índice", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
+
         index_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=index_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+        index_combobox = ttk.Combobox(parent, textvariable=index_name_var, state="readonly")
+        index_combobox.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(parent, text="Cargar Índices", bg="#3e3e3e", fg="black", command=lambda: self.load_indexes(index_combobox)).grid(row=1, column=2, padx=5, pady=5)
 
         tk.Label(parent, text="Nueva Tabla", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=5, pady=5)
         new_table_name_var = tk.StringVar()
@@ -2285,6 +2374,9 @@ class SQLDeveloperEmulator:
         tk.Entry(parent, textvariable=new_columns_var, bg="#2e2e2e", fg="white").grid(row=3, column=1, padx=5, pady=5)
 
         tk.Button(parent, text="Modificar Índice", bg="#3e3e3e", fg="black", command=lambda: self.modify_index(index_name_var.get(), new_table_name_var.get(), new_columns_var.get())).grid(row=4, column=0, columnspan=2, pady=10)
+
+
+
 
     def delete_index_form(self, parent):
         tk.Label(parent, text="Borrar Índice", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
