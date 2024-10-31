@@ -1734,6 +1734,7 @@ class SQLDeveloperEmulator:
     def create_stored_procedure_form(self, parent):
         tk.Label(parent, text="Crear Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
+        # Nombre del procedimiento
         tk.Label(parent, text="Nombre del Procedimiento", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
         self.procedure_name_var = tk.StringVar()
         tk.Entry(parent, textvariable=self.procedure_name_var, bg="#2e2e2e", fg="white", width=30).grid(row=1, column=1, padx=5, pady=5)
@@ -1741,21 +1742,20 @@ class SQLDeveloperEmulator:
         column_frame = tk.Frame(parent, bg="#2e2e2e")
         column_frame.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="w")
 
-        # Ajustar ancho de columnas para que coincidan con los `Entry`
+        # Tabla de parámetros
         self.columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type", "size"), show="headings", height=6)
         self.columns_tree.grid(row=1, column=0, columnspan=4, pady=5)
-
         self.columns_tree.heading("name", text="Nombre")
         self.columns_tree.heading("mode", text="Modo")
         self.columns_tree.heading("data_type", text="Tipo de Dato")
         self.columns_tree.heading("size", text="Tamaño")
 
-        self.columns_tree.column("name", width=150)  # Ajustar el ancho a 150
-        self.columns_tree.column("mode", width=90)  # Ajustar el ancho a 90
-        self.columns_tree.column("data_type", width=120)  # Ajustar el ancho a 120
-        self.columns_tree.column("size", width=60)  # Ajustar el ancho a 60
+        self.columns_tree.column("name", width=150)
+        self.columns_tree.column("mode", width=90)
+        self.columns_tree.column("data_type", width=120)
+        self.columns_tree.column("size", width=60)
 
-        # Campos de entrada para atributos
+        # Campos para atributos
         name_var = tk.StringVar()
         tk.Entry(column_frame, textvariable=name_var, width=15, bg="white", fg="black").grid(row=2, column=0, padx=5, pady=5)
 
@@ -1782,95 +1782,136 @@ class SQLDeveloperEmulator:
             if selected_item:
                 self.columns_tree.delete(selected_item)
 
-        button_frame = tk.Frame(column_frame, bg="#2e2e2e")
-        button_frame.grid(row=3, column=0, columnspan=4, pady=5, sticky="ew")
+        tk.Button(column_frame, text="Agregar Atributo", command=add_column, bg="#3e3e3e", fg="black").grid(row=3, column=0, padx=5)
+        tk.Button(column_frame, text="Eliminar Atributo", command=delete_column, bg="#3e3e3e", fg="black").grid(row=3, column=1, padx=5)
 
-        tk.Button(button_frame, text="Agregar Atributo", command=add_column, bg="#3e3e3e", fg="black").pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Eliminar Atributo", command=delete_column, bg="#3e3e3e", fg="black").pack(side=tk.LEFT, padx=5)
+        # Área para el cuerpo del procedimiento
+        tk.Label(parent, text="Cuerpo del Procedimiento", bg="#2e2e2e", fg="white").grid(row=4, column=0, padx=5, pady=5, sticky="w")
+        procedure_body_text = tk.Text(parent, height=10, width=60, bg="#1e1e1e", fg="white", insertbackground="white")
+        procedure_body_text.grid(row=5, column=0, columnspan=4, padx=5, pady=5, sticky="we")
 
-        tk.Button(parent, text="Crear Procedimiento", command=self.create_stored_procedure, bg="#3e3e3e", fg="black").grid(row=3, column=0, padx=5, pady=10)
+        def create_stored_procedure():
+            procedure_name = self.procedure_name_var.get()
+            if not procedure_name:
+                messagebox.showerror("Error", "Debe ingresar el nombre del procedimiento.")
+                return
 
-    def create_stored_procedure(self):
-        procedure_name = self.procedure_name_var.get()
-        if not procedure_name:
-            messagebox.showerror("Error", "Debe ingresar el nombre del procedimiento.")
-            return
+            parameters = [self.columns_tree.item(item, "values") for item in self.columns_tree.get_children()]
+            param_definitions = []
 
-        parameters = [self.columns_tree.item(item, "values") for item in self.columns_tree.get_children()]
-        param_definitions = []
+            for param in parameters:
+                param_mode = param[1]
+                param_name = param[0]
+                param_type = param[2]
+                param_size = f"({param[3]})" if param_type == "VARCHAR" and param[3] else ""
+                param_def = f"{param_mode} {param_name} {param_type}{param_size}"
+                param_definitions.append(param_def)
 
-        for param in parameters:
-            param_mode = param[1]
-            param_name = param[0]
-            param_type = param[2]
-            param_size = f"({param[3]})" if param_type == "VARCHAR" and param[3] else ""
+            procedure_body = procedure_body_text.get("1.0", tk.END).strip()
 
-            param_def = f"{param_mode} {param_name} {param_type}{param_size}"
-            param_definitions.append(param_def)
+            ddl = f"""
+            CREATE PROCEDURE {procedure_name} (
+                {', '.join(param_definitions)}
+            )
+            PARAMETER STYLE JAVA
+            LANGUAGE JAVA
+            EXTERNAL NAME '{procedure_body}'
+            """
 
-        ddl = f"""
-        CREATE PROCEDURE {procedure_name} (
-            {', '.join(param_definitions)}
-        )
-        PARAMETER STYLE JAVA
-        LANGUAGE JAVA
-        EXTERNAL NAME 'my.package.MyClass.myMethod'
-        """
+            self.query_text.delete(1.0, tk.END)
+            self.query_text.insert(tk.END, ddl)
 
-        self.query_text.delete(1.0, tk.END)
-        self.query_text.insert(tk.END, ddl)
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(ddl)
+                self.conn.commit()
 
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(ddl)
-            self.conn.commit()
+                insert_query = "INSERT INTO SYSPROCEDURES (PROCEDURE_NAME, DEFINITION) VALUES (?, ?)"
+                cursor.execute(insert_query, (procedure_name, ddl))
+                self.conn.commit()
 
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Procedimiento '{procedure_name}' creado exitosamente y almacenado en SYSPROCEDURES.")
+                cursor.close()
 
-            insert_query = "INSERT INTO SYSPROCEDURES (PROCEDURE_NAME, DEFINITION) VALUES (?, ?)"
-            cursor.execute(insert_query, (procedure_name, ddl))
-            self.conn.commit()
+            except Exception as e:
+                self.resultado_text.delete(1.0, tk.END)
+                self.resultado_text.insert(tk.END, f"Error al crear el procedimiento: {str(e)}")
 
-            self.resultado_text.delete(1.0, tk.END)
-            self.resultado_text.insert(tk.END, f"Procedimiento '{procedure_name}' creado exitosamente y almacenado en SYSPROCEDURES.")
-            cursor.close()
-
-        except Exception as e:
-            self.resultado_text.delete(1.0, tk.END)
-            self.resultado_text.insert(tk.END, f"Error al crear el procedimiento: {str(e)}")
+        tk.Button(parent, text="Crear Procedimiento", command=create_stored_procedure, bg="#3e3e3e", fg="black").grid(row=6, column=0, padx=5, pady=10)
+        tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=6, column=1, padx=5, pady=10)
 
 
     def delete_stored_procedure_form(self, parent):
-        tk.Label(parent, text="Borrar Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
+            tk.Label(parent, text="Borrar Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
-        tk.Label(parent, text="Nombre del Procedimiento", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
-        procedure_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=procedure_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+            tk.Label(parent, text="Nombre del Procedimiento", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
 
-        tk.Button(parent, text="Borrar Procedimiento", bg="#3e3e3e", fg="black", command=lambda: self.delete_stored_procedure(procedure_name_var.get())).grid(row=2, column=0, columnspan=2, pady=10)
+            procedure_name_var = tk.StringVar()
+            procedure_combobox = ttk.Combobox(parent, textvariable=procedure_name_var, state="readonly", width=30)
+            procedure_combobox.grid(row=1, column=1, padx=5, pady=5)
+
+            def load_procedures():
+                try:
+                    cursor = self.conn.cursor()
+                    cursor.execute("SELECT ALIAS FROM SYS.SYSALIASES WHERE ALIASTYPE='P'")  # Query para obtener nombres de procedimientos
+                    procedures = [row[0] for row in cursor.fetchall()]
+                    procedure_combobox['values'] = procedures
+                    cursor.close()
+                except Exception as e:
+                    messagebox.showerror("Error", f"Error al cargar procedimientos: {str(e)}")
+
+            def delete_stored_procedure():
+                procedure_name = procedure_name_var.get()
+                if not procedure_name:
+                    messagebox.showerror("Error", "Debe seleccionar un procedimiento.")
+                    return
+
+                try:
+                    cursor = self.conn.cursor()
+                    ddl = f"DROP PROCEDURE {procedure_name}"
+                    self.query_text.delete(1.0, tk.END)
+                    self.query_text.insert(tk.END, ddl)
+
+                    cursor.execute(ddl)
+                    self.conn.commit()
+
+                    self.resultado_text.delete(1.0, tk.END)
+                    self.resultado_text.insert(tk.END, f"Procedimiento '{procedure_name}' borrado exitosamente.")
+                    cursor.close()
+
+
+                except Exception as e:
+                    self.resultado_text.delete(1.0, tk.END)
+                    self.resultado_text.insert(tk.END, f"Error al borrar el procedimiento: {str(e)}")
+
+            tk.Button(parent, text="Cargar Procedimientos", bg="#3e3e3e", fg="black", command=load_procedures).grid(row=2, column=0, padx=5, pady=5)
+            tk.Button(parent, text="Borrar Procedimiento", bg="#3e3e3e", fg="black", command=delete_stored_procedure).grid(row=2, column=1, padx=5, pady=10)
 
     def create_stored_function_form(self, parent):
         tk.Label(parent, text="Crear Función", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=3, pady=3, sticky="w")
 
+        # Nombre de la función
         tk.Label(parent, text="Nombre de la Función", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=3, pady=3, sticky="w")
         function_name_var = tk.StringVar()
         tk.Entry(parent, textvariable=function_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=3, pady=3, sticky="w")
 
-        # ComboBox para el tipo de dato de retorno
+        # Tipo de retorno
         tk.Label(parent, text="Tipo de Retorno", bg="#2e2e2e", fg="white").grid(row=2, column=0, padx=3, pady=3, sticky="w")
         return_type_var = tk.StringVar()
         return_type_combobox = ttk.Combobox(parent, textvariable=return_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly")
         return_type_combobox.grid(row=2, column=1, padx=3, pady=3, sticky="w")
 
-        # Entry para especificar la longitud del tipo de dato de retorno (solo se usa si es VARCHAR)
+        # Longitud del retorno
         tk.Label(parent, text="Longitud del Retorno", bg="#2e2e2e", fg="white").grid(row=2, column=2, padx=3, pady=3, sticky="w")
         return_length_var = tk.StringVar()
         tk.Entry(parent, textvariable=return_length_var, width=5, bg="#2e2e2e", fg="white").grid(row=2, column=3, padx=3, pady=3, sticky="w")
 
-        # Tabla para los parámetros
+        # Tabla de parámetros
         column_frame = tk.Frame(parent, bg="#2e2e2e")
         column_frame.grid(row=3, column=0, columnspan=4, padx=3, pady=3, sticky="w")
 
-        columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type", "length", "default_value"), show="headings", height=6)
+        columns_tree = ttk.Treeview(column_frame, columns=("name", "mode", "data_type", "length", "default_value"), show="headings", height=4)
         columns_tree.grid(row=1, column=0, columnspan=5, pady=3)
         columns_tree.heading("name", text="Nombre")
         columns_tree.heading("mode", text="Modo")
@@ -1906,7 +1947,6 @@ class SQLDeveloperEmulator:
         data_type_combobox = ttk.Combobox(column_frame, textvariable=param_data_type_var, values=["VARCHAR", "INT", "FLOAT"], state="readonly")
         data_type_combobox.grid(row=2, column=2, padx=3, pady=3)
 
-        # Entry para especificar la longitud del tipo de dato
         param_length_var = tk.StringVar()
         tk.Entry(column_frame, textvariable=param_length_var, width=5, bg="white", fg="black").grid(row=2, column=3, padx=3, pady=3)
 
@@ -1916,6 +1956,11 @@ class SQLDeveloperEmulator:
         tk.Button(column_frame, text="Agregar Parámetro", command=add_parameter, bg="#3e3e3e", fg="black").grid(row=3, column=4, padx=3, pady=3)
         tk.Button(column_frame, text="Eliminar Parámetro", command=delete_parameter, bg="#3e3e3e", fg="black").grid(row=4, column=4, padx=3, pady=3)
 
+        # Área para el cuerpo de la función
+        tk.Label(parent, text="Cuerpo de la Función", bg="#2e2e2e", fg="white").grid(row=5, column=0, padx=3, pady=3, sticky="w")
+        function_body_text = tk.Text(parent, height=10, width=60, bg="#1e1e1e", fg="white", insertbackground="white")
+        function_body_text.grid(row=6, column=0, columnspan=4, padx=3, pady=3, sticky="we")
+
         def create_function():
             if not self.conn:
                 messagebox.showerror("Error", "Debe seleccionar una conexión.")
@@ -1924,51 +1969,25 @@ class SQLDeveloperEmulator:
             try:
                 cursor = self.conn.cursor()
                 function_name = function_name_var.get()
-                return_type = return_type_var.get()
-                return_length = return_length_var.get()
-                parameters = [columns_tree.item(item, "values") for item in columns_tree.get_children()]
-
-                if return_type == "VARCHAR":
-                    return_definition = f"{return_type}({return_length})"
-                else:
-                    return_definition = return_type
-
-                ddl = f"CREATE FUNCTION {function_name} ("
-                param_definitions = []
-                for param in parameters:
-                    length = ""
-                    if param[2] == "VARCHAR":
-                        length = f"({param[3]})" if param[3] else ""
-                    param_definitions.append(f"{param[0]} {param[2]}{length}")
-                ddl += ", ".join(param_definitions)
-                if return_type == "INT":
-                    ddl += f") RETURNS {return_definition} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'java.lang.Math.abs'"
-                elif return_type == "VARCHAR":
-                    ddl += f") RETURNS {return_definition} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'java.lang.String.toUpperCase'"
-                elif return_type == "FLOAT":
-                    ddl += f") RETURNS {return_definition} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME 'java.lang.Math.sqrt'"
+                return_type = f"{return_type_var.get()}({return_length_var.get()})" if return_type_var.get() == "VARCHAR" else return_type_var.get()
+                parameters = ", ".join([f"{p[0]} {p[2]}({p[3]})" if p[2] == "VARCHAR" else f"{p[0]} {p[2]}" for p in [columns_tree.item(i, 'values') for i in columns_tree.get_children()]])
+                function_body = function_body_text.get("1.0", tk.END).strip()
+                ddl = f"CREATE FUNCTION {function_name} ({parameters}) RETURNS {return_type} LANGUAGE JAVA PARAMETER STYLE JAVA NO SQL EXTERNAL NAME '{function_body}'"
+                cursor.execute(ddl)
+                self.conn.commit()
 
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, ddl)
 
-                cursor.execute(ddl)
-                self.conn.commit()
-
-                insert_query = f"INSERT INTO SYSFUNCTIONS (FUNCTION_NAME, DEFINITION) VALUES ('{function_name}', '{ddl}')"
-                cursor.execute(insert_query)
-                self.conn.commit()
-
                 self.resultado_text.delete(1.0, tk.END)
-                self.resultado_text.insert(tk.END, f"Función '{function_name}' creada exitosamente y almacenada en SYSFUNCTIONS.")
+                self.resultado_text.insert(tk.END, f"Función '{function_name}' creada exitosamente.")
                 cursor.close()
-
             except Exception as e:
                 self.resultado_text.delete(1.0, tk.END)
                 self.resultado_text.insert(tk.END, f"Error al crear la función: {str(e)}")
 
-
-        tk.Button(parent, text="Crear Función", command=create_function, bg="#3e3e3e", fg="black").grid(row=5, column=0, padx=3, pady=3, sticky="e")
-        tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=5, column=1, padx=3, pady=3, sticky="w")
+        tk.Button(parent, text="Crear Función", command=create_function, bg="#3e3e3e", fg="black").grid(row=7, column=0, padx=3, pady=3, sticky="e")
+        tk.Button(parent, text="Cancelar", command=parent.quit, bg="#3e3e3e", fg="black").grid(row=7, column=1, padx=3, pady=3, sticky="w")
 
     def show_modify_stored_function_form(self, parent):
         tk.Label(parent, text="Seleccione la Función:", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky="w")
@@ -2019,11 +2038,43 @@ class SQLDeveloperEmulator:
     def delete_stored_function_form(self, parent):
         tk.Label(parent, text="Borrar Función", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
 
-        tk.Label(parent, text="Nombre de la Función", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
+        # ComboBox para seleccionar la función
+        tk.Label(parent, text="Seleccione la Función", bg="#2e2e2e", fg="white").grid(row=1, column=0, padx=5, pady=5)
         function_name_var = tk.StringVar()
-        tk.Entry(parent, textvariable=function_name_var, bg="#2e2e2e", fg="white").grid(row=1, column=1, padx=5, pady=5)
+        function_combobox = ttk.Combobox(parent, textvariable=function_name_var, state="readonly", width=30)
+        function_combobox.grid(row=1, column=1, padx=5, pady=5)
 
-        tk.Button(parent, text="Borrar", bg="#3e3e3e", fg="black", command=lambda: self.delete_function(function_name_var.get())).grid(row=2, column=0, columnspan=2, pady=10)
+        # Botón para cargar todas las funciones en el ComboBox
+        def load_functions():
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute("SELECT ALIAS FROM SYS.SYSALIASES WHERE ALIASTYPE='F'")
+                functions = [row[0] for row in cursor.fetchall()]
+                function_combobox['values'] = functions
+                cursor.close()
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudieron cargar las funciones: {e}")
+
+        tk.Button(parent, text="Cargar Funciones", bg="#3e3e3e", fg="black", command=load_functions).grid(row=2, column=0, columnspan=2, pady=10)
+
+        # Botón para eliminar la función seleccionada
+        def delete_function():
+            selected_function = function_name_var.get()
+            if not selected_function:
+                messagebox.showerror("Error", "Debe seleccionar una función para eliminar.")
+                return
+
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(f"DROP FUNCTION {selected_function}")
+                self.conn.commit()
+                messagebox.showinfo("Éxito", f"Función '{selected_function}' eliminada exitosamente.")
+                cursor.close()
+                load_functions()  # Recargar las funciones después de borrar
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo eliminar la función: {e}")
+
+        tk.Button(parent, text="Borrar Función", bg="#3e3e3e", fg="black", command=delete_function).grid(row=3, column=0, columnspan=2, pady=10)
 
     def modify_stored_procedure_form(self, parent):
         tk.Label(parent, text="Modificar Procedimiento Almacenado", bg="#2e2e2e", fg="white").grid(row=0, column=0, padx=5, pady=5)
