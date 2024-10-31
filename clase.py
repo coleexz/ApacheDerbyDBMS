@@ -155,6 +155,7 @@ class SQLDeveloperEmulator:
         query_input.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="we")
 
         def execute_query():
+
             query = query_input.get("1.0", tk.END).strip()
 
             if not query:
@@ -166,11 +167,12 @@ class SQLDeveloperEmulator:
                     messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el query.")
                     return
 
-                # Mostrar el query en el área de texto correspondiente
+                print(self.schema_var.get())
                 self.query_text.delete(1.0, tk.END)
                 self.query_text.insert(tk.END, query)
 
                 cursor = self.conn.cursor()
+                cursor.execute(f"SET SCHEMA '{self.schema_var.get()}'")
 
                 # Ejecutar el query
                 cursor.execute(query)
@@ -1057,7 +1059,7 @@ class SQLDeveloperEmulator:
                 if action == "GRANT":
                     query = f'GRANT {permission} ON {table_name} TO "{user_name.upper()}"'
                 elif action == "REVOKE":
-                    query = f'GRANT {permission} ON {table_name} TO "{user_name.upper()}"'
+                    query = f'REVOKE {permission} ON {table_name} FROM "{user_name.upper()}"'
 
             if not self.conn:
                 messagebox.showerror("Error", "Debe seleccionar una conexión para ejecutar el DDL.")
