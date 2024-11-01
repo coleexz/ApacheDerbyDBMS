@@ -1475,8 +1475,8 @@ class SQLDeveloperEmulator:
         username_var = tk.StringVar()
         password_var = tk.StringVar()
         hostname_var = tk.StringVar()
-        port_var = tk.StringVar(value="1527")
-        sid_var = tk.StringVar(value="myNewDB")
+        port_var = tk.StringVar()
+        sid_var = tk.StringVar()
 
         tk.Label(new_window, text="Nombre", bg="#1e1e1e", fg="white").grid(row=0, column=0, padx=5, pady=5)
         tk.Entry(new_window, textvariable=name_var, bg="#2e2e2e", fg="white").grid(row=0, column=1, padx=5, pady=5)
@@ -1504,7 +1504,7 @@ class SQLDeveloperEmulator:
                 "hostname": hostname_var.get(),
                 "port": port_var.get(),
                 "sid": sid_var.get(),
-                "schema": None  # El esquema se seleccionará después de conectar
+                "schema": None
             }
             self.connections[name_var.get()] = connection_info
             self.update_connections()
